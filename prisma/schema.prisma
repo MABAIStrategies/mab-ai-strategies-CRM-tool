@@ -1,0 +1,296 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DealStage {
+  PROSPECT_IDENTIFIED
+  ENRICHED
+  OUTREACH_SENT
+  DISCOVERY_SCHEDULED
+  DISCOVERY_COMPLETED
+  OFFER_PRESENTED
+  PROPOSAL_SENT
+  CLOSED_WON
+  CLOSED_LOST
+  DELIVERY_IN_PROGRESS
+  DELIVERY_COMPLETE
+}
+
+enum DealOfferType {
+  AUDIT
+  BLUEPRINT
+  LEAD_LIST
+  IMPLEMENTATION
+  OTHER
+}
+
+enum ActivityType {
+  CALL
+  MEETING
+  EMAIL
+  LINKEDIN
+  OTHER
+}
+
+enum TaskStatus {
+  TODO
+  DOING
+  DONE
+}
+
+enum AssetType {
+  SCRIPT
+  ONE_PAGER
+  PROPOSAL
+  TEMPLATE
+  CALCULATOR
+  DECK
+  OTHER
+}
+
+enum AssetStatus {
+  DRAFT
+  APPROVED
+}
+
+enum TemplateOutputType {
+  EMAIL
+  DOC
+  PROPOSAL
+  OTHER
+}
+
+enum MemorySourceType {
+  NOTE
+  ACTIVITY
+  ASSET
+  EMAIL
+  DOC_LINK
+  OTHER
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+model Company {
+  id          String    @id @default(uuid())
+  name        String
+  domain      String?
+  industry    String?
+  region      String?
+  icpTags     String[]
+  riskFlags   String[]
+  notesSummary String?
+  createdBy   String?
+  updatedBy   String?
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  contacts    Contact[]
+  deals       Deal[]
+  activities  Activity[]
+  notes       Note[]
+  tasks       Task[]
+  memoryItems MemoryItem[]
+
+  @@index([deletedAt])
+}
+
+model Contact {
+  id                   String   @id @default(uuid())
+  companyId            String
+  name                 String
+  title                String?
+  email                String?
+  phone                String?
+  linkedinUrl          String?
+  relationshipStrength Int      @default(50)
+  createdBy            String?
+  updatedBy            String?
+  deletedAt            DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  company              Company  @relation(fields: [companyId], references: [id])
+  deals                Deal[]
+  notes                Note[]
+  activities           Activity[]
+  tasks                Task[]
+  memoryItems          MemoryItem[]
+
+  @@index([deletedAt])
+}
+
+model Deal {
+  id               String        @id @default(uuid())
+  companyId        String
+  primaryContactId String?
+  stage            DealStage
+  value            Float?
+  probability      Int           @default(0)
+  closeDate        DateTime?
+  offerType        DealOfferType @default(OTHER)
+  objections       String?
+  roiDrivers       String?
+  nextStepDate     DateTime?
+  momentumScore    Int           @default(0)
+  createdBy        String?
+  updatedBy        String?
+  deletedAt        DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  company          Company       @relation(fields: [companyId], references: [id])
+  primaryContact   Contact?      @relation(fields: [primaryContactId], references: [id])
+  activities       Activity[]
+  notes            Note[]
+  tasks            Task[]
+  memoryItems      MemoryItem[]
+
+  @@index([deletedAt])
+}
+
+model Activity {
+  id             String       @id @default(uuid())
+  companyId      String
+  dealId         String?
+  contactId      String?
+  type           ActivityType
+  occurredAt     DateTime
+  durationMinutes Int?
+  outcome        String?
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+  createdAt      DateTime     @default(now())
+  company        Company      @relation(fields: [companyId], references: [id])
+  deal           Deal?         @relation(fields: [dealId], references: [id])
+  contact        Contact?      @relation(fields: [contactId], references: [id])
+
+  @@index([deletedAt])
+}
+
+model Note {
+  id               String   @id @default(uuid())
+  companyId         String
+  dealId            String?
+  contactId         String?
+  rawText           String
+  searchText        String?
+  structuredExtract Json?
+  summary           String?
+  tags              String[]
+  createdBy         String?
+  updatedBy         String?
+  deletedAt         DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  company           Company  @relation(fields: [companyId], references: [id])
+  deal              Deal?     @relation(fields: [dealId], references: [id])
+  contact           Contact?  @relation(fields: [contactId], references: [id])
+
+  @@index([searchText])
+  @@index([deletedAt])
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  companyId   String?
+  dealId      String?
+  contactId   String?
+  title       String
+  description String?
+  dueAt       DateTime?
+  status      TaskStatus @default(TODO)
+  createdBy   String?
+  updatedBy   String?
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  company     Company?  @relation(fields: [companyId], references: [id])
+  deal        Deal?     @relation(fields: [dealId], references: [id])
+  contact     Contact?  @relation(fields: [contactId], references: [id])
+
+  @@index([deletedAt])
+}
+
+model Asset {
+  id          String      @id @default(uuid())
+  type        AssetType
+  title       String
+  description String?
+  tags        String[]
+  version     String
+  status      AssetStatus @default(DRAFT)
+  storageUri  String
+  createdBy   String?
+  updatedBy   String?
+  deletedAt   DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([deletedAt])
+}
+
+model Template {
+  id              String            @id @default(uuid())
+  name            String
+  description     String?
+  variablesSchema Json
+  prompt          String
+  outputType      TemplateOutputType
+  createdBy       String?
+  updatedBy       String?
+  deletedAt       DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([deletedAt])
+}
+
+model MemoryItem {
+  id             String          @id @default(uuid())
+  sourceType     MemorySourceType
+  sourceId       String
+  companyId      String?
+  dealId         String?
+  contactId      String?
+  extractedFacts Json
+  embedding      Bytes?
+  searchText     String?
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+  createdAt      DateTime        @default(now())
+  company        Company?        @relation(fields: [companyId], references: [id])
+  deal           Deal?           @relation(fields: [dealId], references: [id])
+  contact        Contact?        @relation(fields: [contactId], references: [id])
+
+  @@index([searchText])
+  @@index([deletedAt])
+}
+
+model Job {
+  id            String   @id @default(uuid())
+  type          String
+  payload       Json
+  status        JobStatus @default(QUEUED)
+  attempts      Int      @default(0)
+  lastError     String?
+  idempotencyKey String @unique
+  runAt         DateTime @default(now())
+  createdBy     String?
+  updatedBy     String?
+  deletedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([deletedAt])
+}
