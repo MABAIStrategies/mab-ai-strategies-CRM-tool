@@ -6,7 +6,8 @@ const navItems = [
   { href: "/today", label: "Today" },
   { href: "/workspace", label: "Workspace" },
   { href: "/assets", label: "Assets" },
-  { href: "/search", label: "Search" }
+  { href: "/search", label: "Search" },
+  { href: "/finish-line", label: "Finish Line" }
 ];
 
 export function MobileNav({

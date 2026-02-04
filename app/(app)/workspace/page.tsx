@@ -14,8 +14,8 @@ export default function WorkspacePage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <PrimaryButton label="Advance stage" href="/workspace" ariaLabel="Advance deal stage" />
-          <PrimaryButton label="Log activity" variant="outline" href="/workspace" ariaLabel="Log activity" />
+          <PrimaryButton label="Advance stage" href="/workspace/advance" ariaLabel="Advance deal stage" />
+          <PrimaryButton label="Log activity" variant="outline" href="/workspace/activity" ariaLabel="Log activity" />
         </div>
       </header>
 

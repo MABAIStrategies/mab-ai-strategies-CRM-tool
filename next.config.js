@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const scriptSrc = "script-src 'self';";
+const fontSrc = "font-src 'self';";
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
