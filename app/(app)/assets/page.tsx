@@ -14,11 +14,11 @@ export default function AssetsPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <PrimaryButton label="Upload asset" href="/assets" ariaLabel="Upload asset" />
+          <PrimaryButton label="Upload asset" href="/assets/upload" ariaLabel="Upload asset" />
           <PrimaryButton
             label="Generate from template"
             variant="outline"
-            href="/assets"
+            href="/assets/generate"
             ariaLabel="Generate asset from template"
           />
         </div>

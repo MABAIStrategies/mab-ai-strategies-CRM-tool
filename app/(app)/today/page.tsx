@@ -20,6 +20,12 @@ export default function TodayPage() {
             href="/search"
             ariaLabel="Open command palette"
           />
+          <PrimaryButton
+            label="View finish line"
+            variant="outline"
+            href="/finish-line"
+            ariaLabel="View finish line dashboard"
+          />
         </div>
       </header>
 
@@ -44,6 +50,12 @@ export default function TodayPage() {
             <li>Brightline Logistics — Momentum 81</li>
             <li>HarborTech — Momentum 76</li>
           </ul>
+        </Card>
+        <Card title="Finish Line Focus" subtitle="Unified progress snapshot">
+          <div className="space-y-3 text-sm text-mab-slate">
+            <p>Capture, memory, assets, and compliance are converging toward the final loop.</p>
+            <PrimaryButton label="Open finish line" href="/finish-line" ariaLabel="Open finish line" />
+          </div>
         </Card>
       </div>
     </div>
