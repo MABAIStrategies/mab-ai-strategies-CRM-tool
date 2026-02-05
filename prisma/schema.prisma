@@ -81,26 +81,40 @@ enum JobStatus {
   FAILED
 }
 
+enum OutreachStatus {
+  DRAFT
+  QUEUED
+  SENT
+  DELIVERED
+  OPENED
+  CLICKED
+  REPLIED
+  BOUNCED
+  FAILED
+}
+
 model Company {
-  id          String    @id @default(uuid())
-  name        String
-  domain      String?
-  industry    String?
-  region      String?
-  icpTags     String[]
-  riskFlags   String[]
+  id           String    @id @default(uuid())
+  name         String
+  domain       String?
+  industry     String?
+  region       String?
+  icpTags      String[]
+  riskFlags    String[]
   notesSummary String?
-  createdBy   String?
-  updatedBy   String?
-  deletedAt   DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  contacts    Contact[]
-  deals       Deal[]
-  activities  Activity[]
-  notes       Note[]
-  tasks       Task[]
-  memoryItems MemoryItem[]
+  enrichedData Json?
+  createdBy    String?
+  updatedBy    String?
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  contacts     Contact[]
+  deals        Deal[]
+  activities   Activity[]
+  notes        Note[]
+  tasks        Task[]
+  memoryItems  MemoryItem[]
+  outreachLogs OutreachLog[]
 
   @@index([deletedAt])
 }
@@ -114,6 +128,7 @@ model Contact {
   phone                String?
   linkedinUrl          String?
   relationshipStrength Int      @default(50)
+  source               String?
   createdBy            String?
   updatedBy            String?
   deletedAt            DateTime?
@@ -125,14 +140,17 @@ model Contact {
   activities           Activity[]
   tasks                Task[]
   memoryItems          MemoryItem[]
+  outreachLogs         OutreachLog[]
 
   @@index([deletedAt])
+  @@index([email])
 }
 
 model Deal {
   id               String        @id @default(uuid())
   companyId        String
   primaryContactId String?
+  title            String?
   stage            DealStage
   value            Float?
   probability      Int           @default(0)
@@ -155,30 +173,31 @@ model Deal {
   memoryItems      MemoryItem[]
 
   @@index([deletedAt])
+  @@index([stage])
 }
 
 model Activity {
-  id             String       @id @default(uuid())
-  companyId      String
-  dealId         String?
-  contactId      String?
-  type           ActivityType
-  occurredAt     DateTime
+  id              String       @id @default(uuid())
+  companyId       String
+  dealId          String?
+  contactId       String?
+  type            ActivityType
+  occurredAt      DateTime
   durationMinutes Int?
-  outcome        String?
-  createdBy      String?
-  updatedBy      String?
-  deletedAt      DateTime?
-  createdAt      DateTime     @default(now())
-  company        Company      @relation(fields: [companyId], references: [id])
-  deal           Deal?         @relation(fields: [dealId], references: [id])
-  contact        Contact?      @relation(fields: [contactId], references: [id])
+  outcome         String?
+  createdBy       String?
+  updatedBy       String?
+  deletedAt       DateTime?
+  createdAt       DateTime     @default(now())
+  company         Company      @relation(fields: [companyId], references: [id])
+  deal            Deal?        @relation(fields: [dealId], references: [id])
+  contact         Contact?     @relation(fields: [contactId], references: [id])
 
   @@index([deletedAt])
 }
 
 model Note {
-  id               String   @id @default(uuid())
+  id                String   @id @default(uuid())
   companyId         String
   dealId            String?
   contactId         String?
@@ -193,15 +212,15 @@ model Note {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   company           Company  @relation(fields: [companyId], references: [id])
-  deal              Deal?     @relation(fields: [dealId], references: [id])
-  contact           Contact?  @relation(fields: [contactId], references: [id])
+  deal              Deal?    @relation(fields: [dealId], references: [id])
+  contact           Contact? @relation(fields: [contactId], references: [id])
 
   @@index([searchText])
   @@index([deletedAt])
 }
 
 model Task {
-  id          String    @id @default(uuid())
+  id          String     @id @default(uuid())
   companyId   String?
   dealId      String?
   contactId   String?
@@ -212,13 +231,14 @@ model Task {
   createdBy   String?
   updatedBy   String?
   deletedAt   DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  company     Company?  @relation(fields: [companyId], references: [id])
-  deal        Deal?     @relation(fields: [dealId], references: [id])
-  contact     Contact?  @relation(fields: [contactId], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  company     Company?   @relation(fields: [companyId], references: [id])
+  deal        Deal?      @relation(fields: [dealId], references: [id])
+  contact     Contact?   @relation(fields: [contactId], references: [id])
 
   @@index([deletedAt])
+  @@index([status])
 }
 
 model Asset {
@@ -240,7 +260,7 @@ model Asset {
 }
 
 model Template {
-  id              String            @id @default(uuid())
+  id              String             @id @default(uuid())
   name            String
   description     String?
   variablesSchema Json
@@ -249,14 +269,14 @@ model Template {
   createdBy       String?
   updatedBy       String?
   deletedAt       DateTime?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 
   @@index([deletedAt])
 }
 
 model MemoryItem {
-  id             String          @id @default(uuid())
+  id             String           @id @default(uuid())
   sourceType     MemorySourceType
   sourceId       String
   companyId      String?
@@ -268,29 +288,54 @@ model MemoryItem {
   createdBy      String?
   updatedBy      String?
   deletedAt      DateTime?
-  createdAt      DateTime        @default(now())
-  company        Company?        @relation(fields: [companyId], references: [id])
-  deal           Deal?           @relation(fields: [dealId], references: [id])
-  contact        Contact?        @relation(fields: [contactId], references: [id])
+  createdAt      DateTime         @default(now())
+  company        Company?         @relation(fields: [companyId], references: [id])
+  deal           Deal?            @relation(fields: [dealId], references: [id])
+  contact        Contact?         @relation(fields: [contactId], references: [id])
 
   @@index([searchText])
   @@index([deletedAt])
 }
 
 model Job {
-  id            String   @id @default(uuid())
-  type          String
-  payload       Json
-  status        JobStatus @default(QUEUED)
-  attempts      Int      @default(0)
-  lastError     String?
-  idempotencyKey String @unique
-  runAt         DateTime @default(now())
-  createdBy     String?
-  updatedBy     String?
-  deletedAt     DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String    @id @default(uuid())
+  type           String
+  payload        Json
+  status         JobStatus @default(QUEUED)
+  attempts       Int       @default(0)
+  lastError      String?
+  idempotencyKey String    @unique
+  runAt          DateTime  @default(now())
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([deletedAt])
+}
+
+model OutreachLog {
+  id           String         @id @default(uuid())
+  companyId    String?
+  contactId    String?
+  toEmail      String
+  fromEmail    String?
+  subject      String
+  body         String
+  status       OutreachStatus @default(DRAFT)
+  sentAt       DateTime?
+  openedAt     DateTime?
+  errorMsg     String?
+  sequenceStep Int            @default(1)
+  createdBy    String?
+  deletedAt    DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  company      Company?       @relation(fields: [companyId], references: [id])
+  contact      Contact?       @relation(fields: [contactId], references: [id])
+
+  @@index([deletedAt])
+  @@index([status])
+  @@index([contactId])
 }

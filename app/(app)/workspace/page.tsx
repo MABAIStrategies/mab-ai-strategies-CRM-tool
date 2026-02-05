@@ -1,71 +1,143 @@
-import { Card } from "../../../src/components/ui/card";
-import { PrimaryButton } from "../../../src/components/ui/primary-button";
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
 import { RapidCapture } from "../../../src/components/rapid-capture";
 
+type Deal = {
+  id: string;
+  title: string | null;
+  stage: string;
+  value: number | null;
+  momentumScore: number;
+  offerType: string;
+  company: { id: string; name: string };
+  primaryContact: { id: string; name: string; email: string | null } | null;
+};
+
 export default function WorkspacePage() {
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [selectedDeal, setSelectedDeal] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+
+  const fetchDeals = useCallback(async () => {
+    const res = await fetch("/api/deals?limit=20");
+    if (res.ok) {
+      const data = await res.json();
+      setDeals(data.deals);
+      if (data.deals.length > 0 && !selectedDeal) {
+        setSelectedDeal(data.deals[0].id);
+      }
+    }
+    setLoading(false);
+  }, [selectedDeal]);
+
+  useEffect(() => {
+    fetchDeals();
+  }, [fetchDeals]);
+
+  const current = deals.find((d) => d.id === selectedDeal);
+
   return (
     <div className="space-y-8">
       <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.35em] text-mab-gold">Workspace</p>
-          <h1 className="text-3xl font-semibold text-mab-navy">Westbridge Capital</h1>
-          <p className="mt-2 text-sm text-mab-slate">
-            Deal stage: Discovery Completed · Momentum 92 · Next step: ROI inputs by Friday
-          </p>
+          <h1 className="text-3xl font-semibold text-mab-navy">
+            {current ? current.company.name : "Select a Deal"}
+          </h1>
+          {current && (
+            <p className="mt-2 text-sm text-mab-slate">
+              Deal stage: {current.stage.replace(/_/g, " ")} · Momentum {current.momentumScore} · {current.offerType}
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-3">
-          <PrimaryButton label="Advance stage" href="/workspace/advance" ariaLabel="Advance deal stage" />
-          <PrimaryButton label="Log activity" variant="outline" href="/workspace/activity" ariaLabel="Log activity" />
+          <select
+            value={selectedDeal}
+            onChange={(e) => setSelectedDeal(e.target.value)}
+            className="rounded-xl border border-mab-navy/10 bg-white px-4 py-2 text-sm focus:border-mab-gold focus:outline-none"
+          >
+            {deals.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.company.name} — {d.offerType}
+              </option>
+            ))}
+          </select>
+          {current && (
+            <a
+              href={`/deals/${current.id}`}
+              className="inline-flex items-center rounded-xl bg-mab-navy px-5 py-2 text-sm font-medium text-white transition hover:bg-mab-gold hover:text-mab-navy"
+            >
+              Open Deal
+            </a>
+          )}
         </div>
       </header>
 
-      <RapidCapture />
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card title="Timeline" subtitle="Calls, notes, and signals">
-          <div className="space-y-4 text-sm text-mab-slate">
-            <div>
-              <p className="font-medium text-mab-navy">Discovery Call · 42 min</p>
-              <p>Strong urgency around compliance automation. CFO wants ROI modeling.</p>
-            </div>
-            <div>
-              <p className="font-medium text-mab-navy">LinkedIn Touchpoint</p>
-              <p>Shared AI readiness checklist. Waiting on feedback.</p>
-            </div>
-          </div>
-        </Card>
-        <Card title="Tasks" subtitle="AI-suggested + manual">
-          <ul className="space-y-3 text-sm text-mab-slate">
-            <li>Draft follow-up email with ROI snapshot</li>
-            <li>Attach Compliance Playbook asset</li>
-            <li>Confirm stakeholder map with VP Ops</li>
-          </ul>
-        </Card>
-        <Card title="Assets" subtitle="Recommended for this deal">
-          <ul className="space-y-3 text-sm text-mab-slate">
-            <li>Compliance Automation One-Pager (v2.1)</li>
-            <li>ROI Calculator Template (v1.4)</li>
-            <li>Discovery Call Script (v3.0)</li>
-          </ul>
-        </Card>
-      </div>
-
-      <Card title="Copilot" subtitle="Account Brief · Objection Radar · Next Best Action">
-        <div className="grid gap-4 lg:grid-cols-3 text-sm text-mab-slate">
-          <div>
-            <p className="font-medium text-mab-navy">Account Brief</p>
-            <p>Focus on compliance workflows, reporting cadence, and vendor risk review.</p>
-          </div>
-          <div>
-            <p className="font-medium text-mab-navy">Objection Radar</p>
-            <p>Potential concern: data residency. Suggest Cloud Run + Cloud SQL plan.</p>
-          </div>
-          <div>
-            <p className="font-medium text-mab-navy">Next Best Action</p>
-            <p>Send ROI snapshot + confirm technical workshop invite.</p>
-          </div>
+      {loading ? (
+        <div className="py-20 text-center text-mab-slate">Loading...</div>
+      ) : deals.length === 0 ? (
+        <div className="py-20 text-center text-mab-slate">
+          <p>No deals yet.</p>
+          <a href="/deals/new" className="mt-2 inline-block text-mab-gold hover:underline">
+            Create your first deal
+          </a>
         </div>
-      </Card>
+      ) : (
+        <>
+          <RapidCapture />
+
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="rounded-2xl border border-mab-navy/10 bg-white p-5 shadow-sm">
+              <h3 className="mb-3 text-xs uppercase tracking-wider text-mab-gold">Quick Actions</h3>
+              <div className="space-y-2">
+                <a href={`/deals/${selectedDeal}`} className="block rounded-xl bg-mab-ivory/50 px-4 py-3 text-sm text-mab-navy transition hover:bg-mab-ivory">
+                  View deal details and activity
+                </a>
+                <a href="/outreach" className="block rounded-xl bg-mab-ivory/50 px-4 py-3 text-sm text-mab-navy transition hover:bg-mab-ivory">
+                  Compose outreach email
+                </a>
+                <a href="/companies" className="block rounded-xl bg-mab-ivory/50 px-4 py-3 text-sm text-mab-navy transition hover:bg-mab-ivory">
+                  Browse companies
+                </a>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-mab-navy/10 bg-white p-5 shadow-sm">
+              <h3 className="mb-3 text-xs uppercase tracking-wider text-mab-gold">Active Deals</h3>
+              <div className="space-y-2">
+                {deals.slice(0, 5).map((d) => (
+                  <button
+                    key={d.id}
+                    onClick={() => setSelectedDeal(d.id)}
+                    className={`block w-full rounded-xl px-4 py-3 text-left text-sm transition ${
+                      d.id === selectedDeal ? "bg-mab-navy text-white" : "bg-mab-ivory/50 text-mab-navy hover:bg-mab-ivory"
+                    }`}
+                  >
+                    <p className="font-medium">{d.company.name}</p>
+                    <p className={`text-xs ${d.id === selectedDeal ? "text-white/70" : "text-mab-slate"}`}>
+                      {d.stage.replace(/_/g, " ")} · M{d.momentumScore}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-mab-gold/30 bg-mab-navy p-5 text-white shadow-glow">
+              <p className="mb-1 text-xs uppercase tracking-[0.3em] text-mab-gold">AI Copilot</p>
+              <h3 className="mb-3 text-sm font-semibold">Workspace Intelligence</h3>
+              <div className="space-y-3 text-xs text-white/70">
+                <div>
+                  <p className="font-medium text-white">Next Best Action</p>
+                  <p>Open the deal detail page to log activities, generate proposals, and advance deals through the pipeline.</p>
+                </div>
+                <div>
+                  <p className="font-medium text-white">Pipeline Health</p>
+                  <p>{deals.length} active deals. Average momentum: {Math.round(deals.reduce((s, d) => s + d.momentumScore, 0) / (deals.length || 1))}.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
