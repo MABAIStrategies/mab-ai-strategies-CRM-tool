@@ -74,9 +74,23 @@ async function handleNoteProcess(payload: Record<string, unknown>) {
   }
   const extract = structuredExtractSchema.parse(extractResult);
 
-  await prisma.note.update({
-    where: { id: noteId },
-    data: { summary, structuredExtract: extract }
+  await prisma.$transaction(async (transaction) => {
+    await transaction.note.update({
+      where: { id: noteId },
+      data: { summary, structuredExtract: extract }
+    });
+
+    if (extract.suggestedTasks?.length) {
+      await transaction.task.createMany({
+        data: extract.suggestedTasks.map((task) => ({
+          title: task.title,
+          description: task.description,
+          companyId: note.companyId,
+          dealId: note.dealId,
+          contactId: note.contactId
+        }))
+      });
+    }
   });
 }
 
