@@ -5,6 +5,10 @@ import Link from "next/link";
 const navItems = [
   { href: "/today", label: "Today" },
   { href: "/workspace", label: "Workspace" },
+  { href: "/companies", label: "Companies" },
+  { href: "/contacts", label: "Contacts" },
+  { href: "/deals", label: "Deals" },
+  { href: "/tasks", label: "Tasks" },
   { href: "/assets", label: "Assets" },
   { href: "/search", label: "Search" },
   { href: "/finish-line", label: "Finish Line" }
