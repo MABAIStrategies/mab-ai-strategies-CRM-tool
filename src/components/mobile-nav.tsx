@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useBrandingAssets } from "./use-branding-assets";
 
 const navItems = [
   { href: "/today", label: "Today" },
@@ -17,6 +18,8 @@ export function MobileNav({
   isOpen: boolean;
   onClose: () => void;
 }) {
+  const { assets } = useBrandingAssets();
+
   if (!isOpen) {
     return null;
   }
@@ -27,7 +30,7 @@ export function MobileNav({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
-              src="/branding/mab-logo.svg"
+              src={assets.logo.primary.uri}
               alt="MAB AI Strategies logo"
               className="h-10 w-10"
             />
