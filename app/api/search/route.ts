@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../src/lib/db";
+import { searchMemoryItems } from "../../../src/lib/memory";
 import { rateLimit } from "../../../src/lib/rate-limit";
 
 export async function GET(request: Request) {
@@ -17,14 +18,50 @@ export async function GET(request: Request) {
     );
   }
   const { searchParams } = new URL(request.url);
-  const query = searchParams.get("q") ?? "";
+  const query = searchParams.get("q")?.trim() ?? "";
+  if (!query) {
+    const emptyResponse = NextResponse.json({
+      companies: [],
+      notes: [],
+      memoryItems: []
+    });
+    emptyResponse.headers.set("Access-Control-Allow-Origin", "*");
+    emptyResponse.headers.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    emptyResponse.headers.set("Access-Control-Allow-Headers", "Content-Type");
+    return emptyResponse;
+  }
 
-  const companies = await prisma.company.findMany({
-    where: { name: { contains: query, mode: "insensitive" } },
-    take: 5
-  });
+  const [companies, notes, memoryItems] = await Promise.all([
+    prisma.company.findMany({
+      where: { name: { contains: query, mode: "insensitive" } },
+      take: 5,
+      select: {
+        id: true,
+        name: true,
+        industry: true,
+        region: true,
+        domain: true
+      }
+    }),
+    prisma.note.findMany({
+      where: {
+        deletedAt: null,
+        OR: [
+          { searchText: { contains: query, mode: "insensitive" } },
+          { summary: { contains: query, mode: "insensitive" } },
+          { rawText: { contains: query, mode: "insensitive" } }
+        ]
+      },
+      take: 5,
+      orderBy: { createdAt: "desc" },
+      include: {
+        company: { select: { name: true } }
+      }
+    }),
+    searchMemoryItems(query, 5)
+  ]);
 
-  const response = NextResponse.json({ companies });
+  const response = NextResponse.json({ companies, notes, memoryItems });
   response.headers.set("Access-Control-Allow-Origin", "*");
   response.headers.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   response.headers.set("Access-Control-Allow-Headers", "Content-Type");

@@ -3,6 +3,7 @@ import { prisma } from "./lib/db";
 import { claimNextJob, updateJobStatus } from "./lib/queue";
 import { getAIProvider, logValidationError, sanitizeInput } from "./lib/ai-provider";
 import { structuredExtractSchema } from "./lib/extract";
+import { buildMemorySearchText, upsertMemoryItemForNote } from "./lib/memory";
 
 const ai = getAIProvider();
 
@@ -73,11 +74,18 @@ async function handleNoteProcess(payload: Record<string, unknown>) {
     throw error;
   }
   const extract = structuredExtractSchema.parse(extractResult);
+  const searchText = buildMemorySearchText({
+    rawText: note.rawText,
+    summary,
+    extract
+  });
 
   await prisma.note.update({
     where: { id: noteId },
-    data: { summary, structuredExtract: extract }
+    data: { summary, structuredExtract: extract, searchText }
   });
+
+  await upsertMemoryItemForNote({ note, summary, extract, searchText });
 }
 
 async function handleDealStageChecklist(payload: Record<string, unknown>) {
