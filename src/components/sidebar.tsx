@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useBrandingAssets } from "./use-branding-assets";
 
 const navItems = [
   { href: "/today", label: "Today" },
@@ -9,11 +12,13 @@ const navItems = [
 ];
 
 export function Sidebar() {
+  const { assets } = useBrandingAssets();
+
   return (
     <aside className="hidden w-64 flex-col border-r border-white/60 bg-white/70 px-4 pb-6 pt-6 shadow-sm lg:flex">
       <div className="flex items-center gap-3">
         <img
-          src="/branding/mab-logo.svg"
+          src={assets.logo.primary.uri}
           alt="MAB AI Strategies logo"
           className="h-10 w-10"
         />
