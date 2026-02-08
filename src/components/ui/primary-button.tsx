@@ -9,7 +9,8 @@ export function PrimaryButton({
   onClick,
   href,
   ariaLabel,
-  disabled = false
+  disabled = false,
+  type = "button"
 }: {
   label: string;
   variant?: "solid" | "outline";
@@ -17,6 +18,7 @@ export function PrimaryButton({
   href?: string;
   ariaLabel?: string;
   disabled?: boolean;
+  type?: "button" | "submit" | "reset";
 }) {
   const className = clsx(
     "inline-flex items-center justify-center rounded-full px-5 py-2 text-sm font-medium transition",
@@ -36,7 +38,7 @@ export function PrimaryButton({
 
   return (
     <button
-      type="button"
+      type={type}
       onClick={onClick}
       className={className}
       aria-label={ariaLabel ?? label}

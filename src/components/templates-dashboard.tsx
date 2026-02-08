@@ -14,6 +14,7 @@ export type Template = {
 export function TemplatesDashboard() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [status, setStatus] = useState("idle");
+  const [generateStatus, setGenerateStatus] = useState("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const loadTemplates = async () => {
@@ -39,7 +40,7 @@ export function TemplatesDashboard() {
   }, []);
 
   const handleGenerate = async () => {
-    setStatus("loading");
+    setGenerateStatus("loading");
     try {
       const response = await fetch("/api/templates", {
         method: "POST",
@@ -55,9 +56,14 @@ export function TemplatesDashboard() {
         throw new Error("Unable to create template.");
       }
       await loadTemplates();
+      setGenerateStatus("success");
     } catch (error) {
-      setStatus("error");
+      setGenerateStatus("error");
       setErrorMessage((error as Error).message);
+    } finally {
+      setTimeout(() => {
+        setGenerateStatus("idle");
+      }, 4000);
     }
   };
 
@@ -66,11 +72,25 @@ export function TemplatesDashboard() {
       <div className="flex flex-wrap items-center gap-3">
         <PrimaryButton label="Refresh" onClick={loadTemplates} ariaLabel="Refresh templates" />
         <PrimaryButton
-          label="Generate from template"
+          label={generateStatus === "loading" ? "Generating..." : "Generate from template"}
           variant="outline"
           onClick={handleGenerate}
           ariaLabel="Generate from template"
         />
+        {generateStatus !== "idle" ? (
+          <span className="flex items-center gap-2 rounded-full border border-mab-gold/40 px-3 py-1 text-xs text-mab-navy">
+            <span
+              className={`h-2 w-2 rounded-full ${
+                generateStatus === "loading"
+                  ? "animate-pulse-glow bg-mab-gold"
+                  : generateStatus === "success"
+                    ? "bg-mab-navy"
+                    : "bg-red-500"
+              }`}
+            />
+            {generateStatus === "loading" ? "Rendering asset output" : "Template synced"}
+          </span>
+        ) : null}
       </div>
       {status === "loading" ? <p className="text-sm text-mab-slate">Loading templates...</p> : null}
       {errorMessage ? (

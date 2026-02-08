@@ -13,7 +13,11 @@ export type Asset = {
   status: string;
 };
 
-export function AssetsDashboard() {
+type AssetsDashboardProps = {
+  refreshKey?: number;
+};
+
+export function AssetsDashboard({ refreshKey }: AssetsDashboardProps) {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [status, setStatus] = useState("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -38,7 +42,7 @@ export function AssetsDashboard() {
 
   useEffect(() => {
     loadAssets();
-  }, []);
+  }, [refreshKey]);
 
   const handleCreate = async () => {
     setStatus("loading");

@@ -24,7 +24,7 @@ const jobSchemas = {
   }),
   ASSET_CLASSIFY: z.object({ assetId: z.string() }),
   MEMORY_EMBED: z.object({ memoryItemId: z.string(), text: z.string() }),
-  TEMPLATE_GENERATE: z.object({ templateId: z.string() })
+  TEMPLATE_GENERATE: z.object({ templateId: z.string(), assetId: z.string().optional() })
 };
 
 type JobType = keyof typeof jobSchemas;
@@ -109,20 +109,49 @@ async function handleMemoryEmbed(payload: Record<string, unknown>) {
 }
 
 async function handleTemplateGenerate(payload: Record<string, unknown>) {
-  const { templateId } = jobSchemas.TEMPLATE_GENERATE.parse(payload);
+  const { templateId, assetId } = jobSchemas.TEMPLATE_GENERATE.parse(payload);
   const template = await prisma.template.findUnique({ where: { id: templateId } });
   if (!template) {
     throw new Error(`Template ${templateId} not found`);
   }
+
+  const resolvedType =
+    template.outputType === "PROPOSAL"
+      ? "PROPOSAL"
+      : template.outputType === "DOC"
+        ? "TEMPLATE"
+        : template.outputType === "EMAIL"
+          ? "SCRIPT"
+          : "OTHER";
+
+  if (assetId) {
+    const existingAsset = await prisma.asset.findUnique({ where: { id: assetId } });
+    if (existingAsset) {
+      await prisma.asset.update({
+        where: { id: assetId },
+        data: {
+          type: resolvedType,
+          title: `${template.name} Output`,
+          description: template.description ?? "Generated draft ready for review.",
+          tags: ["Generated", "Template"],
+          version: "1.0",
+          status: "DRAFT",
+          storageUri: `local://generated/${template.id}`
+        }
+      });
+      return;
+    }
+  }
+
   await prisma.asset.create({
     data: {
-      type: "PROPOSAL",
+      type: resolvedType,
       title: `${template.name} Output`,
-      description: template.description ?? null,
-      tags: ["Generated"],
+      description: template.description ?? "Generated draft ready for review.",
+      tags: ["Generated", "Template"],
       version: "1.0",
       status: "DRAFT",
-      storageUri: "local://generated"
+      storageUri: `local://generated/${template.id}`
     }
   });
 }
