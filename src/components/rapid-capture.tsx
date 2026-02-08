@@ -6,7 +6,7 @@ import { Textarea } from "./ui/textarea";
 
 type CaptureStatus = "idle" | "saving" | "saved" | "error";
 
-export function RapidCapture() {
+export function RapidCapture({ companyId, dealId }: { companyId?: string; dealId?: string }) {
   const [open, setOpen] = useState(false);
   const [rawText, setRawText] = useState("");
   const [status, setStatus] = useState<CaptureStatus>("idle");
@@ -47,7 +47,8 @@ export function RapidCapture() {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-csrf-token": "local-dev" },
       body: JSON.stringify({
-        companyId: "demo-company",
+        companyId: companyId ?? "demo-company",
+        dealId,
         rawText,
         tags: ["rapid-capture"]
       })

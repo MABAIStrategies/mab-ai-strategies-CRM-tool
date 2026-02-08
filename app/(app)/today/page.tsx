@@ -1,7 +1,53 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Card } from "../../../src/components/ui/card";
 import { PrimaryButton } from "../../../src/components/ui/primary-button";
 
+type TodayPayload = {
+  priorityTasks: string[];
+  nextCalls: string[];
+  topDeals: string[];
+};
+
+const emptyPayload: TodayPayload = {
+  priorityTasks: [],
+  nextCalls: [],
+  topDeals: []
+};
+
 export default function TodayPage() {
+  const [payload, setPayload] = useState<TodayPayload>(emptyPayload);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const response = await fetch("/api/today", {
+          headers: { "x-csrf-token": "local-dev" }
+        });
+        if (!response.ok) {
+          throw new Error("Unable to load today data.");
+        }
+        const data = (await response.json()) as TodayPayload;
+        if (mounted) {
+          setPayload(data);
+          setStatus("ready");
+        }
+      } catch (error) {
+        if (mounted) {
+          console.error(error);
+          setStatus("error");
+        }
+      }
+    };
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   return (
     <div className="space-y-8">
       <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -30,25 +76,39 @@ export default function TodayPage() {
       </header>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card title="Today’s Priority Tasks" subtitle="7 due, 3 critical">
+        <Card title="Today’s Priority Tasks" subtitle="Auto-ranked from the new pipeline">
           <ul className="space-y-3 text-sm text-mab-slate">
-            <li>Prepare follow-up for Brightline Logistics (Deal: Implementation)</li>
-            <li>Send proposal draft to HarborTech</li>
-            <li>Confirm discovery agenda with Westbridge Capital</li>
+            {payload.priorityTasks.length ? (
+              payload.priorityTasks.map((task) => <li key={task}>{task}</li>)
+            ) : (
+              <li className="rounded-xl border border-mab-gold/30 bg-white/70 px-3 py-2 text-mab-navy">
+                {status === "loading"
+                  ? "Syncing priorities..."
+                  : "No tasks yet. Start a rapid capture to populate this list."}
+              </li>
+            )}
           </ul>
         </Card>
         <Card title="Next Calls" subtitle="Auto-sorted by urgency">
           <ul className="space-y-3 text-sm text-mab-slate">
-            <li>11:00 AM – Margo Lee (Westbridge Capital)</li>
-            <li>2:30 PM – Liam Chen (Brightline Logistics)</li>
-            <li>4:15 PM – Pre-brief with internal team</li>
+            {payload.nextCalls.length ? (
+              payload.nextCalls.map((call) => <li key={call}>{call}</li>)
+            ) : (
+              <li className="rounded-xl border border-mab-gold/30 bg-white/70 px-3 py-2 text-mab-navy">
+                {status === "loading" ? "Refreshing call queue..." : "No scheduled calls yet."}
+              </li>
+            )}
           </ul>
         </Card>
         <Card title="Top Deals by Momentum" subtitle="AI-calculated engagement">
           <ul className="space-y-3 text-sm text-mab-slate">
-            <li>Westbridge Capital — Momentum 92</li>
-            <li>Brightline Logistics — Momentum 81</li>
-            <li>HarborTech — Momentum 76</li>
+            {payload.topDeals.length ? (
+              payload.topDeals.map((deal) => <li key={deal}>{deal}</li>)
+            ) : (
+              <li className="rounded-xl border border-mab-gold/30 bg-white/70 px-3 py-2 text-mab-navy">
+                {status === "loading" ? "Calculating momentum..." : "No momentum data yet."}
+              </li>
+            )}
           </ul>
         </Card>
         <Card title="Finish Line Focus" subtitle="Unified progress snapshot">
