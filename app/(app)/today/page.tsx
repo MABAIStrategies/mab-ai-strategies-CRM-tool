@@ -1,7 +1,24 @@
 import { Card } from "../../../src/components/ui/card";
 import { PrimaryButton } from "../../../src/components/ui/primary-button";
+import { getTodayDashboardData } from "../../../src/lib/dashboard-queries";
 
-export default function TodayPage() {
+const formatTime = (date: Date) =>
+  date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit"
+  });
+
+const formatStage = (stage: string) => stage.replace(/_/g, " ").toLowerCase();
+
+export default async function TodayPage() {
+  const { priorityTasks, upcomingActivities, topDeals } = await getTodayDashboardData();
+
+  const prioritySubtitle = `${priorityTasks.length} due · ${priorityTasks.filter((task) => task.status === "DOING").length} in motion`;
+  const callsSubtitle = upcomingActivities.length
+    ? "Auto-sorted by urgency"
+    : "No upcoming calls yet";
+  const dealsSubtitle = topDeals.length ? "AI-calculated engagement" : "Add deals to see momentum";
+
   return (
     <div className="space-y-8">
       <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -30,26 +47,51 @@ export default function TodayPage() {
       </header>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card title="Today’s Priority Tasks" subtitle="7 due, 3 critical">
-          <ul className="space-y-3 text-sm text-mab-slate">
-            <li>Prepare follow-up for Brightline Logistics (Deal: Implementation)</li>
-            <li>Send proposal draft to HarborTech</li>
-            <li>Confirm discovery agenda with Westbridge Capital</li>
-          </ul>
+        <Card title="Today’s Priority Tasks" subtitle={prioritySubtitle} data={priorityTasks}>
+          {(tasks) => (
+            <ul className="space-y-3 text-sm text-mab-slate">
+              {tasks.length ? (
+                tasks.map((task) => (
+                  <li key={task.id}>
+                    {task.title} · {task.companyName}
+                    {task.dealStage ? ` (${formatStage(task.dealStage)})` : ""}
+                  </li>
+                ))
+              ) : (
+                <li className="text-mab-slate/70">No tasks due yet. Queue the next action in Rapid Capture.</li>
+              )}
+            </ul>
+          )}
         </Card>
-        <Card title="Next Calls" subtitle="Auto-sorted by urgency">
-          <ul className="space-y-3 text-sm text-mab-slate">
-            <li>11:00 AM – Margo Lee (Westbridge Capital)</li>
-            <li>2:30 PM – Liam Chen (Brightline Logistics)</li>
-            <li>4:15 PM – Pre-brief with internal team</li>
-          </ul>
+        <Card title="Next Calls" subtitle={callsSubtitle} data={upcomingActivities}>
+          {(activities) => (
+            <ul className="space-y-3 text-sm text-mab-slate">
+              {activities.length ? (
+                activities.map((activity) => (
+                  <li key={activity.id}>
+                    {formatTime(activity.occurredAt)} — {activity.contactName ?? "Unassigned"} ({activity.companyName})
+                  </li>
+                ))
+              ) : (
+                <li className="text-mab-slate/70">Schedule a call to populate your command queue.</li>
+              )}
+            </ul>
+          )}
         </Card>
-        <Card title="Top Deals by Momentum" subtitle="AI-calculated engagement">
-          <ul className="space-y-3 text-sm text-mab-slate">
-            <li>Westbridge Capital — Momentum 92</li>
-            <li>Brightline Logistics — Momentum 81</li>
-            <li>HarborTech — Momentum 76</li>
-          </ul>
+        <Card title="Top Deals by Momentum" subtitle={dealsSubtitle} data={topDeals}>
+          {(deals) => (
+            <ul className="space-y-3 text-sm text-mab-slate">
+              {deals.length ? (
+                deals.map((deal) => (
+                  <li key={deal.id}>
+                    {deal.companyName} — Momentum {deal.momentumScore}
+                  </li>
+                ))
+              ) : (
+                <li className="text-mab-slate/70">No momentum data yet. Add a deal to start scoring.</li>
+              )}
+            </ul>
+          )}
         </Card>
         <Card title="Finish Line Focus" subtitle="Unified progress snapshot">
           <div className="space-y-3 text-sm text-mab-slate">
