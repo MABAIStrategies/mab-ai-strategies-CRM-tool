@@ -114,15 +114,22 @@ async function handleTemplateGenerate(payload: Record<string, unknown>) {
   if (!template) {
     throw new Error(`Template ${templateId} not found`);
   }
+  const outputToAssetType: Record<string, string> = {
+    EMAIL: "SCRIPT",
+    DOC: "ONE_PAGER",
+    PROPOSAL: "PROPOSAL",
+    OTHER: "OTHER"
+  };
+  const assetType = outputToAssetType[template.outputType] ?? "OTHER";
   await prisma.asset.create({
     data: {
-      type: "PROPOSAL",
+      type: assetType,
       title: `${template.name} Output`,
       description: template.description ?? null,
-      tags: ["Generated"],
+      tags: ["Generated", template.outputType],
       version: "1.0",
       status: "DRAFT",
-      storageUri: "local://generated"
+      storageUri: `local://generated/${templateId}`
     }
   });
 }
