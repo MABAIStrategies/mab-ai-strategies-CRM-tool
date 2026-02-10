@@ -94,15 +94,45 @@ npm run test:e2e
 
 ## Deployment
 
-### Cloud Run (recommended)
-1. Build the container:
+### Cloud Run (recommended for production)
+
+This repo now includes a production helper script:
+
+```bash
+scripts/deploy-cloud-run.sh
+```
+
+#### One-time GCP setup
+1. Install and authenticate gcloud:
    ```bash
-   docker build -t mab-crm .
+   gcloud auth login
+   gcloud auth application-default login
    ```
-2. Push to Google Artifact Registry.
-3. Deploy to Cloud Run with environment variables:
-   - `DATABASE_URL` (Cloud SQL)
-4. Run `prisma migrate deploy` during release.
+2. Create or select a GCP project.
+3. Create a Cloud SQL Postgres instance and database.
+4. Build your production connection string (`DATABASE_URL`) using a private connector or Cloud SQL Auth Proxy strategy.
+
+#### Deploy
+Set required environment variables and run deploy:
+
+```bash
+export GCP_PROJECT_ID="your-project-id"
+export GCP_REGION="us-central1"
+export CLOUD_RUN_SERVICE="mab-crm-prod"
+export AR_REPO="mab-crm"
+export DATABASE_URL="postgresql://..."
+export AUTH_SECRET="long-random-secret"
+export PASSCODE_HASH="bcrypt-hash"
+export APP_URL="https://mab-crm-prod-xxxx.a.run.app"
+
+scripts/deploy-cloud-run.sh
+```
+
+The script will:
+- enable required APIs,
+- create Artifact Registry repo if needed,
+- build and push image via Cloud Build,
+- deploy to Cloud Run with required env vars.
 
 ### Vercel (fallback)
 - Configure Postgres (e.g., Neon + pgvector) and set `DATABASE_URL`.
