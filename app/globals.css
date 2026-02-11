@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-mab-ivory text-mab-ink antialiased;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #d4af37;
+  outline-offset: 2px;
+}
+
+.glass-card {
+  @apply bg-white/80 backdrop-blur border border-white/40 shadow-sm;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
