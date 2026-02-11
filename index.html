@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MAB AI Strategies CRM — Rapid Capture</title>
+    <style>
+      :root {
+        --blue-900: #0b1f3a;
+        --blue-800: #102a4d;
+        --gold-500: #d4a43b;
+        --gold-300: #f2d07a;
+        --off-white: #f7f5ef;
+        --slate-200: #e4e8f0;
+        --slate-400: #9aa5b1;
+        --slate-700: #3a4552;
+        --success: #2f9e44;
+        --warning: #f08c00;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Inter", "Segoe UI", sans-serif;
+        background: var(--off-white);
+        color: var(--blue-900);
+      }
+
+      .app-shell {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        min-height: 100vh;
+        background: linear-gradient(180deg, #f7f5ef 0%, #fbfaf7 100%);
+      }
+
+      .sidebar {
+        background: var(--blue-900);
+        color: var(--off-white);
+        padding: 28px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .sidebar::after {
+        content: "";
+        position: absolute;
+        inset: -40% -20% auto auto;
+        width: 220px;
+        height: 220px;
+        background: radial-gradient(circle, rgba(244, 199, 90, 0.18), transparent 70%);
+        opacity: 0.7;
+        pointer-events: none;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .logo {
+        width: 52px;
+        height: 52px;
+      }
+
+      .brand-title {
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+
+      .brand-subtitle {
+        font-size: 12px;
+        opacity: 0.7;
+      }
+
+      .nav {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .nav button {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: inherit;
+        border-radius: 12px;
+        padding: 12px 16px;
+        text-align: left;
+        cursor: pointer;
+        transition: transform 0.2s ease, border 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .nav button:hover {
+        transform: translateY(-2px);
+        border-color: rgba(212, 164, 59, 0.5);
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+      }
+
+      .sidebar-card {
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 16px;
+        padding: 16px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .headshot {
+        width: 100%;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .main {
+        padding: 32px 40px 80px;
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+      }
+
+      .top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .search-input {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: white;
+        padding: 14px 18px;
+        border-radius: 14px;
+        border: 1px solid var(--slate-200);
+        box-shadow: 0 10px 30px rgba(15, 28, 58, 0.08);
+      }
+
+      .search-input input {
+        border: none;
+        outline: none;
+        flex: 1;
+        font-size: 16px;
+        background: transparent;
+      }
+
+      .action-row {
+        display: flex;
+        gap: 12px;
+      }
+
+      .btn {
+        padding: 12px 18px;
+        border-radius: 12px;
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, var(--gold-500), var(--gold-300));
+        color: var(--blue-900);
+        box-shadow: 0 12px 24px rgba(212, 164, 59, 0.32);
+      }
+
+      .btn-secondary {
+        background: white;
+        color: var(--blue-900);
+        border: 1px solid var(--slate-200);
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+      }
+
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 18px;
+      }
+
+      .kpi-card {
+        background: white;
+        border-radius: 18px;
+        padding: 18px 20px;
+        box-shadow: 0 16px 34px rgba(15, 28, 58, 0.08);
+        display: grid;
+        gap: 8px;
+      }
+
+      .kpi-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--slate-700);
+      }
+
+      .kpi-value {
+        font-size: 24px;
+        font-weight: 700;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        gap: 24px;
+      }
+
+      .panel {
+        background: white;
+        border-radius: 20px;
+        padding: 22px;
+        box-shadow: 0 18px 40px rgba(15, 28, 58, 0.08);
+      }
+
+      .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(212, 164, 59, 0.15);
+        color: var(--blue-900);
+      }
+
+      .note-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .note {
+        padding: 14px 16px;
+        border-radius: 14px;
+        border: 1px solid var(--slate-200);
+        background: #fffdfa;
+        display: grid;
+        gap: 8px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .note:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 24px rgba(15, 28, 58, 0.12);
+      }
+
+      .note-status {
+        font-size: 12px;
+        color: var(--slate-400);
+      }
+
+      .note-status.saving {
+        color: var(--warning);
+      }
+
+      .note-status.saved {
+        color: var(--success);
+      }
+
+      .drawer {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 420px;
+        height: 100vh;
+        background: white;
+        box-shadow: -18px 0 40px rgba(15, 28, 58, 0.2);
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        padding: 24px;
+        display: grid;
+        gap: 20px;
+        z-index: 20;
+      }
+
+      .drawer.open {
+        transform: translateX(0);
+      }
+
+      .drawer textarea {
+        width: 100%;
+        min-height: 160px;
+        border-radius: 14px;
+        border: 1px solid var(--slate-200);
+        padding: 14px;
+        font-size: 15px;
+      }
+
+      .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(11, 31, 58, 0.4);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+        z-index: 10;
+      }
+
+      .overlay.show {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .command-palette {
+        position: fixed;
+        top: 16%;
+        left: 50%;
+        transform: translateX(-50%) scale(0.96);
+        width: min(640px, 92vw);
+        background: white;
+        border-radius: 18px;
+        box-shadow: 0 30px 60px rgba(15, 28, 58, 0.25);
+        padding: 20px;
+        display: none;
+        flex-direction: column;
+        gap: 14px;
+        z-index: 30;
+      }
+
+      .command-palette.open {
+        display: flex;
+        animation: pop 0.2s ease forwards;
+      }
+
+      @keyframes pop {
+        from {
+          transform: translateX(-50%) scale(0.9);
+          opacity: 0.5;
+        }
+        to {
+          transform: translateX(-50%) scale(1);
+          opacity: 1;
+        }
+      }
+
+      .palette-item {
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: border 0.2s ease, background 0.2s ease;
+      }
+
+      .palette-item:hover {
+        border-color: var(--gold-500);
+        background: rgba(212, 164, 59, 0.08);
+      }
+
+      .results {
+        display: grid;
+        gap: 12px;
+      }
+
+      .result {
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid var(--slate-200);
+        background: #ffffff;
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .result-type {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--slate-400);
+      }
+
+      .semantic-score {
+        font-size: 12px;
+        color: var(--gold-500);
+        font-weight: 600;
+      }
+
+      .pulse {
+        animation: pulse 1.2s infinite;
+      }
+
+      @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(212, 164, 59, 0.4); }
+        70% { box-shadow: 0 0 0 12px rgba(212, 164, 59, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(212, 164, 59, 0); }
+      }
+
+      @media (max-width: 1024px) {
+        .app-shell {
+          grid-template-columns: 1fr;
+        }
+        .sidebar {
+          display: none;
+        }
+        .workspace {
+          grid-template-columns: 1fr;
+        }
+        .drawer {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <svg class="logo" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="MAB AI Strategies logo">
+            <rect x="4" y="4" width="56" height="56" rx="16" fill="#d4a43b" />
+            <path d="M18 44L26 20L34 44H30L28.6 38H23.4L22 44H18Z" fill="#0b1f3a" />
+            <path d="M37 20H44.5C48 20 50 21.8 50 24.8C50 27 48.7 28.8 46.6 29.4C49.2 30 51 31.8 51 34.7C51 38 48.5 40 44.5 40H37V20ZM41 24V28H44C45.6 28 46.4 27.2 46.4 26C46.4 24.8 45.6 24 44 24H41ZM41 32V36H44.4C46.2 36 47.2 35.2 47.2 34C47.2 32.8 46.2 32 44.4 32H41Z" fill="#0b1f3a" />
+          </svg>
+          <div>
+            <div class="brand-title">MAB AI Strategies</div>
+            <div class="brand-subtitle">Local-First AI CRM</div>
+          </div>
+        </div>
+        <nav class="nav">
+          <button type="button">Pipeline Command Center</button>
+          <button type="button">Memory Intelligence Hub</button>
+          <button type="button">Asset Vault</button>
+          <button type="button">Meeting Pulse</button>
+        </nav>
+        <div class="sidebar-card">
+          <strong>Professional Headshot</strong>
+          <svg class="headshot" viewBox="0 0 320 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Professional headshot">
+            <defs>
+              <linearGradient id="headshotGradient" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#102a4d" />
+                <stop offset="100%" stop-color="#d4a43b" />
+              </linearGradient>
+            </defs>
+            <rect width="320" height="360" rx="24" fill="url(#headshotGradient)" />
+            <circle cx="160" cy="140" r="60" fill="#f7f5ef" opacity="0.9" />
+            <path d="M80 320C90 260 130 230 160 230C190 230 230 260 240 320" fill="#f7f5ef" opacity="0.9" />
+            <path d="M120 150C130 170 150 180 160 180C170 180 190 170 200 150" stroke="#0b1f3a" stroke-width="4" stroke-linecap="round" />
+          </svg>
+          <span class="brand-subtitle">Executive profile in focus</span>
+        </div>
+      </aside>
+      <main class="main">
+        <header class="top-bar">
+          <div class="search-input">
+            <span>🔍</span>
+            <input id="global-search" type="text" placeholder="Search across companies, contacts, deals, notes, tasks, and memory" />
+            <span class="tag">Semantic + Keyword</span>
+          </div>
+          <div class="action-row">
+            <button class="btn btn-secondary" id="open-command">Command Palette ⌘K</button>
+            <button class="btn btn-primary pulse" id="open-drawer">Rapid Capture</button>
+          </div>
+        </header>
+
+        <section class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Active Pursuits</div>
+            <div class="kpi-value" id="active-pursuits">8</div>
+            <div class="brand-subtitle">+2 generated this week</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Memory Recall</div>
+            <div class="kpi-value">96%</div>
+            <div class="brand-subtitle">Semantic recall latency 1.2s</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Daily Capture Velocity</div>
+            <div class="kpi-value" id="capture-velocity">14s</div>
+            <div class="brand-subtitle">Goal: &lt; 15s per note</div>
+          </div>
+        </section>
+
+        <section class="workspace">
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Rapid-Capture Feed</h2>
+                <p class="brand-subtitle">Optimistic UI with autosave—never lose a moment of insight.</p>
+              </div>
+              <span class="tag">Autosave Active</span>
+            </div>
+            <div class="note-list" id="note-list"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Global Search Results</h2>
+                <p class="brand-subtitle">Blend keyword precision with semantic intent.</p>
+              </div>
+              <span class="tag">Live indexing</span>
+            </div>
+            <div class="results" id="search-results"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+
+    <div class="drawer" id="drawer">
+      <div class="panel-header">
+        <div>
+          <h2>Rapid Capture</h2>
+          <p class="brand-subtitle">Log a note in under 15 seconds with AI assistance.</p>
+        </div>
+        <button class="btn btn-secondary" id="close-drawer">Close</button>
+      </div>
+      <label>
+        Title
+        <input id="note-title" type="text" placeholder="Discovery: Orion Expansion" style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--slate-200); margin-top:6px;" />
+      </label>
+      <label>
+        Note
+        <textarea id="note-body" placeholder="Key insights, next steps, commitments..."></textarea>
+      </label>
+      <label>
+        Linked entity
+        <select id="note-entity" style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--slate-200); margin-top:6px;">
+          <option>Company: Helios Mobility</option>
+          <option>Contact: Riya Patel</option>
+          <option>Deal: Helios - RevOps AI</option>
+          <option>Task: Follow-up Brief</option>
+        </select>
+      </label>
+      <div class="action-row">
+        <button class="btn btn-secondary" id="attach-asset">Attach Asset</button>
+        <button class="btn btn-primary" id="save-note">Save &amp; Generate Summary</button>
+      </div>
+      <div class="note-status" id="drawer-status">Autosave ready.</div>
+    </div>
+
+    <div class="command-palette" id="command-palette">
+      <div class="search-input">
+        <span>⚡️</span>
+        <input id="command-input" type="text" placeholder="Type a command" />
+      </div>
+      <div class="palette-item" data-action="new-note">New Note<span>↵</span></div>
+      <div class="palette-item" data-action="new-deal">New Deal<span>↵</span></div>
+      <div class="palette-item" data-action="attach-asset">Attach Asset<span>↵</span></div>
+      <div class="palette-item" data-action="generate-proposal">Generate Proposal<span>↵</span></div>
+      <div class="palette-item" data-action="search-memory">Search Memory<span>↵</span></div>
+    </div>
+
+    <script>
+      const drawer = document.getElementById("drawer");
+      const overlay = document.getElementById("overlay");
+      const openDrawerBtn = document.getElementById("open-drawer");
+      const closeDrawerBtn = document.getElementById("close-drawer");
+      const noteList = document.getElementById("note-list");
+      const drawerStatus = document.getElementById("drawer-status");
+      const saveNoteBtn = document.getElementById("save-note");
+      const noteTitle = document.getElementById("note-title");
+      const noteBody = document.getElementById("note-body");
+      const noteEntity = document.getElementById("note-entity");
+      const searchInput = document.getElementById("global-search");
+      const searchResults = document.getElementById("search-results");
+      const commandPalette = document.getElementById("command-palette");
+      const openCommandBtn = document.getElementById("open-command");
+      const commandInput = document.getElementById("command-input");
+
+      const notes = [
+        {
+          id: "note-1",
+          title: "Helios Mobility: AI roadmap alignment",
+          body: "Confirmed appetite for RevOps co-pilot and proactive churn signals.",
+          entity: "Deal: Helios - RevOps AI",
+          status: "saved",
+          timestamp: "2m ago",
+        },
+        {
+          id: "note-2",
+          title: "Orion Logistics: procurement sync",
+          body: "Key risk: data access windows. Action: send security packet.",
+          entity: "Company: Orion Logistics",
+          status: "saved",
+          timestamp: "12m ago",
+        },
+      ];
+
+      const entities = {
+        companies: [
+          { id: "company-1", label: "Helios Mobility", description: "EV fleet analytics" },
+          { id: "company-2", label: "Orion Logistics", description: "Supply chain modernization" },
+        ],
+        contacts: [
+          { id: "contact-1", label: "Riya Patel", description: "VP RevOps" },
+          { id: "contact-2", label: "Marcus Lee", description: "CFO" },
+        ],
+        deals: [
+          { id: "deal-1", label: "Helios - RevOps AI", description: "$320K / 9 months" },
+          { id: "deal-2", label: "Orion - AI Intake", description: "$210K / 6 months" },
+        ],
+        notes,
+        tasks: [
+          { id: "task-1", label: "Send security packet", description: "Due tomorrow" },
+          { id: "task-2", label: "Draft proposal outline", description: "Due Friday" },
+        ],
+        memory: [
+          { id: "mem-1", label: "Helios meeting #3", description: "Expansion into LATAM" },
+          { id: "mem-2", label: "Orion discovery", description: "Legacy CRM migration" },
+        ],
+      };
+
+      const vocab = ["ai", "revops", "proposal", "security", "pipeline", "memory", "asset", "churn", "logistics", "mobility", "migration", "automation"];
+
+      function embed(text) {
+        const vector = new Array(vocab.length).fill(0);
+        const words = text.toLowerCase().split(/\W+/);
+        words.forEach((word) => {
+          const index = vocab.indexOf(word);
+          if (index >= 0) {
+            vector[index] += 1;
+          }
+        });
+        return vector;
+      }
+
+      function cosineSimilarity(a, b) {
+        const dot = a.reduce((sum, val, idx) => sum + val * b[idx], 0);
+        const magA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
+        const magB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
+        if (magA === 0 || magB === 0) return 0;
+        return dot / (magA * magB);
+      }
+
+      function renderNotes() {
+        noteList.innerHTML = "";
+        notes
+          .slice()
+          .reverse()
+          .forEach((note) => {
+            const card = document.createElement("div");
+            card.className = "note";
+            card.innerHTML = `
+              <strong>${note.title}</strong>
+              <div>${note.body}</div>
+              <div class="note-status ${note.status}">
+                ${note.status === "saving" ? "Saving..." : "Saved"} · ${note.timestamp}
+              </div>
+              <div class="tag">${note.entity}</div>
+            `;
+            noteList.appendChild(card);
+          });
+      }
+
+      function renderResults(query = "") {
+        const allItems = [
+          ...entities.companies.map((item) => ({ ...item, type: "Company" })),
+          ...entities.contacts.map((item) => ({ ...item, type: "Contact" })),
+          ...entities.deals.map((item) => ({ ...item, type: "Deal" })),
+          ...entities.notes.map((item) => ({ id: item.id, label: item.title, description: item.body, type: "Note" })),
+          ...entities.tasks.map((item) => ({ ...item, type: "Task" })),
+          ...entities.memory.map((item) => ({ ...item, type: "Memory" })),
+        ];
+
+        const queryEmbedding = embed(query);
+        const filtered = allItems
+          .map((item) => {
+            const combined = `${item.label} ${item.description}`.toLowerCase();
+            const keywordMatch = combined.includes(query.toLowerCase());
+            const semanticScore = cosineSimilarity(queryEmbedding, embed(combined));
+            return { ...item, keywordMatch, semanticScore };
+          })
+          .filter((item) => query.length === 0 || item.keywordMatch || item.semanticScore > 0.2)
+          .sort((a, b) => b.semanticScore - a.semanticScore)
+          .slice(0, 8);
+
+        searchResults.innerHTML = "";
+        filtered.forEach((item) => {
+          const row = document.createElement("div");
+          row.className = "result";
+          row.innerHTML = `
+            <div>
+              <div class="result-type">${item.type}</div>
+              <strong>${item.label}</strong>
+              <div class="brand-subtitle">${item.description}</div>
+            </div>
+            <div class="semantic-score">${(item.semanticScore * 100).toFixed(0)}% semantic</div>
+          `;
+          searchResults.appendChild(row);
+        });
+      }
+
+      function openDrawer() {
+        drawer.classList.add("open");
+        overlay.classList.add("show");
+        noteTitle.focus();
+      }
+
+      function closeDrawer() {
+        drawer.classList.remove("open");
+        overlay.classList.remove("show");
+      }
+
+      function openPalette() {
+        commandPalette.classList.add("open");
+        overlay.classList.add("show");
+        commandInput.focus();
+      }
+
+      function closePalette() {
+        commandPalette.classList.remove("open");
+        overlay.classList.remove("show");
+      }
+
+      function setDrawerStatus(text, state = "") {
+        drawerStatus.textContent = text;
+        drawerStatus.className = `note-status ${state}`;
+      }
+
+      function handleSave() {
+        const title = noteTitle.value.trim() || "Quick capture";
+        const body = noteBody.value.trim() || "New note captured with MAB AI Strategies";
+        const entity = noteEntity.value;
+        const timestamp = "just now";
+
+        const optimisticNote = {
+          id: `note-${Date.now()}`,
+          title,
+          body,
+          entity,
+          status: "saving",
+          timestamp,
+        };
+
+        notes.push(optimisticNote);
+        setDrawerStatus("Saving to memory graph...", "saving");
+        renderNotes();
+
+        setTimeout(() => {
+          optimisticNote.status = "saved";
+          optimisticNote.timestamp = "saved 3s ago";
+          setDrawerStatus("Saved and synced. AI summary ready.", "saved");
+          renderNotes();
+        }, 1200);
+
+        noteTitle.value = "";
+        noteBody.value = "";
+      }
+
+      function autosave() {
+        if (!drawer.classList.contains("open")) return;
+        if (noteBody.value.trim().length === 0) return;
+        setDrawerStatus("Autosaving draft...", "saving");
+        setTimeout(() => {
+          setDrawerStatus("Draft autosaved.", "saved");
+        }, 800);
+      }
+
+      openDrawerBtn.addEventListener("click", openDrawer);
+      closeDrawerBtn.addEventListener("click", closeDrawer);
+      overlay.addEventListener("click", () => {
+        closeDrawer();
+        closePalette();
+      });
+      saveNoteBtn.addEventListener("click", handleSave);
+      searchInput.addEventListener("input", (event) => renderResults(event.target.value));
+      openCommandBtn.addEventListener("click", openPalette);
+
+      document.addEventListener("keydown", (event) => {
+        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+          event.preventDefault();
+          openPalette();
+        }
+        if (event.key === "Escape") {
+          closeDrawer();
+          closePalette();
+        }
+      });
+
+      commandPalette.addEventListener("click", (event) => {
+        const target = event.target.closest(".palette-item");
+        if (!target) return;
+        const action = target.dataset.action;
+        closePalette();
+        switch (action) {
+          case "new-note":
+            openDrawer();
+            break;
+          case "new-deal":
+            alert("New deal flow opened in Pipeline Command Center.");
+            break;
+          case "attach-asset":
+            alert("Attach asset panel launched.");
+            break;
+          case "generate-proposal":
+            alert("Proposal generation workflow queued.");
+            break;
+          case "search-memory":
+            searchInput.focus();
+            break;
+          default:
+            break;
+        }
+      });
+
+      noteBody.addEventListener("input", () => {
+        setDrawerStatus("Typing...", "");
+        clearTimeout(noteBody.autosaveTimer);
+        noteBody.autosaveTimer = setTimeout(autosave, 600);
+      });
+
+      renderNotes();
+      renderResults();
+    </script>
+  </body>
+</html>
