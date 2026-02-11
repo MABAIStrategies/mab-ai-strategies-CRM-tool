@@ -24,3 +24,25 @@ A hyper-interactive, local-first CRM built for MAB AI Strategies to support heav
 
 ## Repository Structure (expected)
 
+---
+
+## Async Jobs (Local Development)
+
+This repo ships with a Postgres-backed job queue, worker, and a simple runner script.
+
+1. **Apply the schema** (e.g. via psql):
+   ```bash
+   psql "$DATABASE_URL" -f db/schema.sql
+   ```
+2. **Install worker deps**:
+   ```bash
+   pip install psycopg2-binary
+   ```
+3. **Start the worker**:
+   ```bash
+   DATABASE_URL=postgres://user:pass@localhost:5432/mab_crm scripts/run_worker.sh
+   ```
+4. **Enqueue a sample job**:
+   ```bash
+   DATABASE_URL=postgres://user:pass@localhost:5432/mab_crm python scripts/enqueue_job.py
+   ```
