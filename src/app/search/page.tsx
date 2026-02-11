@@ -2,26 +2,64 @@
 
 import { ArrowUpRight, Filter, Radar, SearchIcon } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useMemo } from "react";
 
 import InsightCard from "@/components/layout/InsightCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 const filters = ["clients", "assets", "signals"] as const;
+type FilterType = (typeof filters)[number];
+
+function getActiveFilters(paramValue: string | null): FilterType[] {
+  if (!paramValue) {
+    return ["clients"];
+  }
+
+  return paramValue
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item): item is FilterType => filters.includes(item as FilterType));
+}
 
 export default function SearchPage() {
-  const [query, setQuery] = useState("");
-  const [activeFilters, setActiveFilters] = useState<(typeof filters)[number][]>([
-    "clients",
-  ]);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  const toggleFilter = (filter: (typeof filters)[number]) => {
-    setActiveFilters((current) =>
-      current.includes(filter)
-        ? current.filter((item) => item !== filter)
-        : [...current, filter]
-    );
+  const query = searchParams.get("q") ?? "";
+  const activeFilters = getActiveFilters(searchParams.get("filters"));
+
+  const updateParams = (next: { q?: string; filters?: FilterType[] }) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (next.q !== undefined) {
+      if (next.q.trim()) {
+        params.set("q", next.q);
+      } else {
+        params.delete("q");
+      }
+    }
+
+    if (next.filters !== undefined) {
+      if (next.filters.length) {
+        params.set("filters", next.filters.join(","));
+      } else {
+        params.delete("filters");
+      }
+    }
+
+    const queryString = params.toString();
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
+  };
+
+  const toggleFilter = (filter: FilterType) => {
+    const nextFilters = activeFilters.includes(filter)
+      ? activeFilters.filter((item) => item !== filter)
+      : [...activeFilters, filter];
+
+    updateParams({ filters: nextFilters });
   };
 
   const helperText = useMemo(() => {
@@ -56,15 +94,16 @@ export default function SearchPage() {
             <SearchIcon size={18} className="text-brand-gold" />
             <Input
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => updateParams({ q: event.target.value })}
               placeholder="Search signals, clients, and assets..."
             />
           </div>
-          <Button asChild>
-            <Link href={`/search?q=${encodeURIComponent(query)}`}>
-              <Filter size={16} />
-              Apply Search
-            </Link>
+          <Button
+            type="button"
+            onClick={() => updateParams({ q: query, filters: activeFilters })}
+          >
+            <Filter size={16} />
+            Apply Search
           </Button>
         </div>
 

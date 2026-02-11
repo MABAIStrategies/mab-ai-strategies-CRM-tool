@@ -1,3 +1,4 @@
+import "@/env.mjs";
 import type { Metadata } from "next";
 
 import Providers from "@/app/providers";
