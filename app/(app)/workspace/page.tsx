@@ -1,17 +1,34 @@
 import { Card } from "../../../src/components/ui/card";
-import { PrimaryButton } from "../../../src/components/ui/primary-button";
 import { RapidCapture } from "../../../src/components/rapid-capture";
+import { PrimaryButton } from "../../../src/components/ui/primary-button";
 import { getWorkspaceSnapshot } from "../../../src/lib/dashboard-queries";
 
-const formatStage = (stage: string) => stage.replace(/_/g, " ").toLowerCase();
-const formatDate = (date: Date) =>
-  date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+export const revalidate = 60;
 
-export default async function WorkspacePage() {
+const formatStage = (stage: string) =>
+  stage
+    .replace(/_/g, " ")
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+
+const formatDate = (date: Date | string) => {
+  const normalizedDate = typeof date === "string" ? new Date(date) : date;
+  return normalizedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+};
+
+export default async function WorkspacePage({
+  searchParams
+}: {
+  searchParams?: { capture?: string };
+}) {
+  const params = searchParams;
   const { focusDeal, timeline, tasks, assets } = await getWorkspaceSnapshot();
 
-  const dealStage = focusDeal ? formatStage(focusDeal.stage) : "pipeline";
-  const nextStep = focusDeal?.nextStepDate ? formatDate(focusDeal.nextStepDate) : "queue next step";
+  const dealStage = focusDeal ? formatStage(focusDeal.stage) : "Pipeline";
+  const nextStep = focusDeal?.nextStepDate ? formatDate(focusDeal.nextStepDate) : "Queue next step";
+  const openRapidCapture = params?.capture === "1";
+
   return (
     <div className="space-y-8">
       <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -30,7 +47,7 @@ export default async function WorkspacePage() {
         </div>
       </header>
 
-      <RapidCapture />
+      <RapidCapture defaultOpen={openRapidCapture} />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card title="Timeline" subtitle="Calls, notes, and signals" data={timeline}>
@@ -40,7 +57,7 @@ export default async function WorkspacePage() {
                 items.map((item) => (
                   <div key={item.id}>
                     <p className="font-medium text-mab-navy">
-                      {item.type.toLowerCase()} · {formatDate(item.occurredAt)}
+                      {formatStage(item.type)} · {formatDate(item.occurredAt)}
                       {item.durationMinutes ? ` · ${item.durationMinutes} min` : ""}
                     </p>
                     <p>{item.outcome ?? "Outcome captured."}</p>
@@ -58,7 +75,7 @@ export default async function WorkspacePage() {
               {items.length ? (
                 items.map((task) => (
                   <li key={task.id}>
-                    {task.title} · {task.status.toLowerCase()}
+                    {task.title} · {formatStage(task.status)}
                     {task.dueAt ? ` (${formatDate(task.dueAt)})` : ""}
                   </li>
                 ))
@@ -74,7 +91,7 @@ export default async function WorkspacePage() {
               {items.length ? (
                 items.map((asset) => (
                   <li key={asset.id}>
-                    {asset.title} (v{asset.version}) · {asset.status.toLowerCase()}
+                    {asset.title} (v{asset.version}) · {formatStage(asset.status)}
                   </li>
                 ))
               ) : (
@@ -86,7 +103,7 @@ export default async function WorkspacePage() {
       </div>
 
       <Card title="Copilot" subtitle="Account Brief · Objection Radar · Next Best Action">
-        <div className="grid gap-4 lg:grid-cols-3 text-sm text-mab-slate">
+        <div className="grid gap-4 text-sm text-mab-slate lg:grid-cols-3">
           <div>
             <p className="font-medium text-mab-navy">Account Brief</p>
             <p>Focus on compliance workflows, reporting cadence, and vendor risk review.</p>

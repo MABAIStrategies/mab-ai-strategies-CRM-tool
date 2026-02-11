@@ -6,13 +6,17 @@ import { Textarea } from "./ui/textarea";
 
 type CaptureStatus = "idle" | "saving" | "saved" | "error";
 
-export function RapidCapture() {
-  const [open, setOpen] = useState(false);
+export function RapidCapture({ defaultOpen = false }: { defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   const [rawText, setRawText] = useState("");
   const [status, setStatus] = useState<CaptureStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isCooldown, setIsCooldown] = useState(false);
+
+  useEffect(() => {
+    setOpen(defaultOpen);
+  }, [defaultOpen]);
 
   useEffect(() => {
     if (!rawText || !open) {

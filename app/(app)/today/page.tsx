@@ -2,13 +2,22 @@ import { Card } from "../../../src/components/ui/card";
 import { PrimaryButton } from "../../../src/components/ui/primary-button";
 import { getTodayDashboardData } from "../../../src/lib/dashboard-queries";
 
-const formatTime = (date: Date) =>
-  date.toLocaleTimeString("en-US", {
+export const revalidate = 60;
+
+const formatTime = (date: Date | string) => {
+  const normalizedDate = typeof date === "string" ? new Date(date) : date;
+  return normalizedDate.toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit"
   });
+};
 
-const formatStage = (stage: string) => stage.replace(/_/g, " ").toLowerCase();
+const formatStage = (stage: string) =>
+  stage
+    .replace(/_/g, " ")
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
 
 export default async function TodayPage() {
   const { priorityTasks, upcomingActivities, topDeals } = await getTodayDashboardData();
@@ -30,7 +39,11 @@ export default async function TodayPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <PrimaryButton label="Start rapid capture" href="/workspace" ariaLabel="Start rapid capture flow" />
+          <PrimaryButton
+            label="Start rapid capture"
+            href="/workspace?capture=1"
+            ariaLabel="Start rapid capture flow"
+          />
           <PrimaryButton
             label="Launch command palette"
             variant="outline"

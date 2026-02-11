@@ -1,19 +1,13 @@
-import { ReactNode } from "react";
+import React, { ReactNode } from "react";
 
-type CardData<T> = {
-  data?: T;
-};
-
-export function Card<T>({
-  title,
-  subtitle,
-  children,
-  data
-}: {
+type CardProps<T> = {
   title: string;
   subtitle?: string;
   children: ReactNode | ((data: NonNullable<T>) => ReactNode);
-} & CardData<T>) {
+  data?: T;
+};
+
+function CardComponent<T>({ title, subtitle, children, data }: CardProps<T>) {
   return (
     <section className="glass-card rounded-2xl p-6">
       <div className="flex items-start justify-between">
@@ -29,3 +23,5 @@ export function Card<T>({
     </section>
   );
 }
+
+export const Card = React.memo(CardComponent) as <T>(props: CardProps<T>) => React.JSX.Element;
