@@ -1,0 +1,13 @@
+{
+  "name": "mab-ai-strategies-crm",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "echo 'no lint configured'",
+    "test": "echo 'no tests configured'"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  }
+}
