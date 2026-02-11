@@ -1,11 +1,22 @@
 -- Job queue table for async work
-CREATE TYPE job_status AS ENUM ('queued', 'processing', 'completed', 'failed', 'dead');
-CREATE TYPE job_type AS ENUM (
-  'NOTE_PROCESS',
-  'DEAL_STAGE_CHECKLIST',
-  'ASSET_CLASSIFY',
-  'MEMORY_EMBED'
-);
+DO $$
+BEGIN
+  CREATE TYPE job_status AS ENUM ('queued', 'processing', 'completed', 'failed', 'dead');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  CREATE TYPE job_type AS ENUM (
+    'NOTE_PROCESS',
+    'DEAL_STAGE_CHECKLIST',
+    'ASSET_CLASSIFY',
+    'MEMORY_EMBED'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
 CREATE TABLE IF NOT EXISTS jobs (
   id BIGSERIAL PRIMARY KEY,

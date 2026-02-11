@@ -7,12 +7,12 @@ import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any, Callable, Dict, Optional, Set
+from typing import Any, Callable, Dict, Optional
 
 import psycopg2
 import psycopg2.extras
 
-JOB_TYPES: Set[str] = {
+JOB_TYPES = {
     "NOTE_PROCESS",
     "DEAL_STAGE_CHECKLIST",
     "ASSET_CLASSIFY",
@@ -25,6 +25,47 @@ DEFAULT_BACKOFF_BASE_SECONDS = 5
 DEFAULT_JOB_TIMEOUT_SECONDS = 120
 
 logger = logging.getLogger("job_worker")
+
+
+@dataclass
+class PayloadRule:
+    required: set[str]
+    optional: set[str]
+    field_types: Dict[str, type]
+
+
+PAYLOAD_RULES: Dict[str, PayloadRule] = {
+    "NOTE_PROCESS": PayloadRule(
+        required={"note_id"},
+        optional={"text", "source"},
+        field_types={"note_id": str, "text": str, "source": str},
+    ),
+    "DEAL_STAGE_CHECKLIST": PayloadRule(
+        required={"deal_id", "stage"},
+        optional={"owner_id", "metadata"},
+        field_types={
+            "deal_id": str,
+            "stage": str,
+            "owner_id": str,
+            "metadata": dict,
+        },
+    ),
+    "ASSET_CLASSIFY": PayloadRule(
+        required={"asset_id"},
+        optional={"content", "mime_type"},
+        field_types={"asset_id": str, "content": str, "mime_type": str},
+    ),
+    "MEMORY_EMBED": PayloadRule(
+        required={"memory_id", "text"},
+        optional={"entity_id", "entity_type"},
+        field_types={
+            "memory_id": str,
+            "text": str,
+            "entity_id": str,
+            "entity_type": str,
+        },
+    ),
+}
 
 
 @dataclass
@@ -46,6 +87,9 @@ class JobWorker:
         poll_interval_seconds: int = DEFAULT_POLL_INTERVAL_SECONDS,
         backoff_base_seconds: int = DEFAULT_BACKOFF_BASE_SECONDS,
         default_job_timeout_seconds: int = DEFAULT_JOB_TIMEOUT_SECONDS,
+        dead_letter_handler: Optional[
+            Callable[[Job, str, datetime], None]
+        ] = None,
     ) -> None:
         self.database_url = database_url
         self.worker_id = worker_id
@@ -53,8 +97,16 @@ class JobWorker:
         self.poll_interval_seconds = poll_interval_seconds
         self.backoff_base_seconds = backoff_base_seconds
         self.default_job_timeout_seconds = default_job_timeout_seconds
+        self.dead_letter_handler = dead_letter_handler
         self._shutdown_requested = False
         self._register_signal_handlers()
+
+        self.handler_registry: Dict[str, Callable[[Dict[str, Any]], None]] = {
+            "NOTE_PROCESS": self._handle_note_process,
+            "DEAL_STAGE_CHECKLIST": self._handle_deal_stage_checklist,
+            "ASSET_CLASSIFY": self._handle_asset_classify,
+            "MEMORY_EMBED": self._handle_memory_embed,
+        }
 
     def run_forever(self) -> None:
         logger.info("Worker %s started", self.worker_id)
@@ -176,38 +228,22 @@ class JobWorker:
             self._mark_failed(job, str(exc))
 
     def _handler_for(self, job_type: str) -> Callable[[Dict[str, Any]], None]:
-        if job_type not in JOB_TYPES:
-            return self._handle_unknown
-        return {
-            "NOTE_PROCESS": self._handle_note_process,
-            "DEAL_STAGE_CHECKLIST": self._handle_deal_stage_checklist,
-            "ASSET_CLASSIFY": self._handle_asset_classify,
-            "MEMORY_EMBED": self._handle_memory_embed,
-        }[job_type]
+        return self.handler_registry.get(job_type, self._handle_unknown)
 
     def _handle_unknown(self, payload: Dict[str, Any]) -> None:
         raise ValueError(f"Unsupported job type payload={payload}")
 
     def _handle_note_process(self, payload: Dict[str, Any]) -> None:
-        self._validate_payload(payload, ["note_id"])
         self._log_action("NOTE_PROCESS", payload)
 
     def _handle_deal_stage_checklist(self, payload: Dict[str, Any]) -> None:
-        self._validate_payload(payload, ["deal_id", "stage"])
         self._log_action("DEAL_STAGE_CHECKLIST", payload)
 
     def _handle_asset_classify(self, payload: Dict[str, Any]) -> None:
-        self._validate_payload(payload, ["asset_id"])
         self._log_action("ASSET_CLASSIFY", payload)
 
     def _handle_memory_embed(self, payload: Dict[str, Any]) -> None:
-        self._validate_payload(payload, ["memory_id", "text"])
         self._log_action("MEMORY_EMBED", payload)
-
-    def _validate_payload(self, payload: Dict[str, Any], required_keys: list[str]) -> None:
-        missing = [key for key in required_keys if key not in payload]
-        if missing:
-            raise ValueError(f"Missing required payload keys: {', '.join(missing)}")
 
     def _log_action(self, job_type: str, payload: Dict[str, Any]) -> None:
         logger.info(
@@ -264,6 +300,9 @@ class JobWorker:
                 )
                 conn.commit()
 
+        if new_status == "dead" and self.dead_letter_handler:
+            self.dead_letter_handler(job, error_message, next_run_at)
+
         logger.info(
             "Worker %s updated failed job id=%s status=%s attempt=%s next_run_at=%s",
             self.worker_id,
@@ -276,6 +315,27 @@ class JobWorker:
     def _backoff_seconds(self, attempt: int) -> int:
         jitter = random.randint(0, self.backoff_base_seconds)
         return int(self.backoff_base_seconds * (2 ** (attempt - 1)) + jitter)
+
+
+def _validate_payload_for_job_type(job_type: str, payload: Dict[str, Any]) -> None:
+    rule = PAYLOAD_RULES[job_type]
+    missing = rule.required - payload.keys()
+    if missing:
+        raise ValueError(
+            f"Missing required payload keys for {job_type}: {', '.join(sorted(missing))}"
+        )
+
+    extra = payload.keys() - rule.required - rule.optional
+    if extra:
+        raise ValueError(
+            f"Unexpected payload keys for {job_type}: {', '.join(sorted(extra))}"
+        )
+
+    for field_name, expected_type in rule.field_types.items():
+        if field_name in payload and not isinstance(payload[field_name], expected_type):
+            raise ValueError(
+                f"Invalid payload field type for {field_name}: expected {expected_type.__name__}"
+            )
 
 
 def _validate_job_input(
@@ -295,6 +355,8 @@ def _validate_job_input(
         raise ValueError("timeout_seconds must be > 0")
     if idempotency_key is not None and not idempotency_key.strip():
         raise ValueError("idempotency_key cannot be empty when provided")
+
+    _validate_payload_for_job_type(job_type, payload)
 
 
 def enqueue_job(
@@ -352,6 +414,18 @@ def enqueue_job(
             return job_id
 
 
+def _default_dead_letter_handler(job: Job, error: str, next_run_at: datetime) -> None:
+    logger.error(
+        "DEAD LETTER: job id=%s type=%s attempts=%s/%s error=%s next_run_at=%s",
+        job.id,
+        job.type,
+        job.attempts + 1,
+        job.max_attempts,
+        error,
+        next_run_at.isoformat(),
+    )
+
+
 def load_worker_from_env() -> JobWorker:
     database_url = os.environ.get("DATABASE_URL")
     if not database_url:
@@ -378,6 +452,7 @@ def load_worker_from_env() -> JobWorker:
         poll_interval_seconds=poll_interval,
         backoff_base_seconds=backoff_base,
         default_job_timeout_seconds=default_timeout,
+        dead_letter_handler=_default_dead_letter_handler,
     )
 
 

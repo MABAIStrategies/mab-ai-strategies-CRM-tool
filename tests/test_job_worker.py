@@ -16,7 +16,7 @@ class JobWorkerUnitTests(unittest.TestCase):
     def test_validate_job_input_accepts_valid(self):
         _validate_job_input(
             job_type="NOTE_PROCESS",
-            payload={"note_id": "123"},
+            payload={"note_id": "123", "text": "hello"},
             idempotency_key="note-123",
             max_attempts=3,
             timeout_seconds=30,
@@ -35,7 +35,7 @@ class JobWorkerUnitTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             _validate_job_input(
                 job_type="NOTE_PROCESS",
-                payload={"x": 1},
+                payload={"note_id": "123", "extra": "nope"},
                 idempotency_key="",
                 max_attempts=3,
                 timeout_seconds=30,
@@ -44,9 +44,18 @@ class JobWorkerUnitTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             _validate_job_input(
                 job_type="NOTE_PROCESS",
-                payload={"x": 1},
+                payload={"note_id": "123", "text": "ok"},
                 idempotency_key=None,
                 max_attempts=0,
+                timeout_seconds=30,
+            )
+
+        with self.assertRaises(ValueError):
+            _validate_job_input(
+                job_type="MEMORY_EMBED",
+                payload={"memory_id": "m1", "text": 123},
+                idempotency_key=None,
+                max_attempts=1,
                 timeout_seconds=30,
             )
 

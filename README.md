@@ -22,10 +22,6 @@ A hyper-interactive, local-first CRM built for MAB AI Strategies to support heav
 
 ---
 
-## Repository Structure (expected)
-
----
-
 ## Async Jobs (Local Development)
 
 This repo ships with a Postgres-backed job queue, worker, and a simple runner script.
@@ -47,8 +43,41 @@ This repo ships with a Postgres-backed job queue, worker, and a simple runner sc
    DATABASE_URL=postgres://user:pass@localhost:5432/mab_crm python scripts/enqueue_job.py
    ```
 
-5. **Behavior highlights**:
-   - Row locking via `FOR UPDATE SKIP LOCKED` for safe multi-worker polling
-   - Retries with exponential backoff + jitter
-   - Enqueue idempotency via `idempotency_key`
-   - Payload validation, timeout handling, structured logging, and graceful SIGTERM shutdown
+### Handler registration and dispatch pattern
+
+The worker uses a **handler registry** (`self.handler_registry`) mapping job type strings to callables:
+
+- `NOTE_PROCESS`
+- `DEAL_STAGE_CHECKLIST`
+- `ASSET_CLASSIFY`
+- `MEMORY_EMBED`
+
+Dispatch resolves handlers from this dictionary at runtime (`_handler_for`). This avoids brittle `if/elif` chains and makes extension straightforward: add a handler method and a single registry entry.
+
+### Payload validation by job type
+
+Validation runs at enqueue time using per-type payload rules:
+
+- required fields
+- optional fields
+- expected field types
+
+This catches malformed payloads before they reach worker execution.
+
+### Dead-letter monitoring
+
+When retries are exhausted (`max_attempts`), jobs are moved to `dead` status and the worker calls `dead_letter_handler`.
+
+Default behavior logs an error event containing job id, type, attempt count, and last error. In production, replace or wrap this hook to emit alerts to Slack, PagerDuty, email, or your observability stack.
+
+### Integration test for locking and idempotency
+
+An integration test is available in `tests/test_job_worker_integration.py`. It requires a real Postgres URL:
+
+```bash
+TEST_DATABASE_URL=postgres://user:pass@localhost:5432/mab_crm_test python -m unittest discover -s tests -p 'test_job_worker_integration.py' -v
+```
+
+It verifies:
+- idempotent enqueue returns the same job row for duplicate idempotency key
+- concurrent workers do not lock/execute the same row simultaneously (`FOR UPDATE SKIP LOCKED`)
