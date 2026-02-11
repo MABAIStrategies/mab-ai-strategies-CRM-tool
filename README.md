@@ -46,3 +46,9 @@ This repo ships with a Postgres-backed job queue, worker, and a simple runner sc
    ```bash
    DATABASE_URL=postgres://user:pass@localhost:5432/mab_crm python scripts/enqueue_job.py
    ```
+
+5. **Behavior highlights**:
+   - Row locking via `FOR UPDATE SKIP LOCKED` for safe multi-worker polling
+   - Retries with exponential backoff + jitter
+   - Enqueue idempotency via `idempotency_key`
+   - Payload validation, timeout handling, structured logging, and graceful SIGTERM shutdown

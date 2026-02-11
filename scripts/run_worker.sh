@@ -6,4 +6,7 @@ if [[ -z "${DATABASE_URL:-}" ]]; then
   exit 1
 fi
 
+export LOG_LEVEL="${LOG_LEVEL:-INFO}"
+export PYTHONUNBUFFERED=1
+
 python -m worker.job_worker

@@ -1,15 +1,18 @@
 import json
+import logging
 import os
 import random
+import signal
 import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Set
 
 import psycopg2
 import psycopg2.extras
 
-JOB_TYPES = {
+JOB_TYPES: Set[str] = {
     "NOTE_PROCESS",
     "DEAL_STAGE_CHECKLIST",
     "ASSET_CLASSIFY",
@@ -19,6 +22,9 @@ JOB_TYPES = {
 DEFAULT_LOCK_TIMEOUT_SECONDS = 60
 DEFAULT_POLL_INTERVAL_SECONDS = 1
 DEFAULT_BACKOFF_BASE_SECONDS = 5
+DEFAULT_JOB_TIMEOUT_SECONDS = 120
+
+logger = logging.getLogger("job_worker")
 
 
 @dataclass
@@ -28,6 +34,7 @@ class Job:
     payload: Dict[str, Any]
     attempts: int
     max_attempts: int
+    timeout_seconds: int
 
 
 class JobWorker:
@@ -38,20 +45,41 @@ class JobWorker:
         lock_timeout_seconds: int = DEFAULT_LOCK_TIMEOUT_SECONDS,
         poll_interval_seconds: int = DEFAULT_POLL_INTERVAL_SECONDS,
         backoff_base_seconds: int = DEFAULT_BACKOFF_BASE_SECONDS,
+        default_job_timeout_seconds: int = DEFAULT_JOB_TIMEOUT_SECONDS,
     ) -> None:
         self.database_url = database_url
         self.worker_id = worker_id
         self.lock_timeout_seconds = lock_timeout_seconds
         self.poll_interval_seconds = poll_interval_seconds
         self.backoff_base_seconds = backoff_base_seconds
+        self.default_job_timeout_seconds = default_job_timeout_seconds
+        self._shutdown_requested = False
+        self._register_signal_handlers()
 
     def run_forever(self) -> None:
-        while True:
-            job = self._lock_next_job()
+        logger.info("Worker %s started", self.worker_id)
+        while not self._shutdown_requested:
+            try:
+                job = self._lock_next_job()
+            except Exception:  # noqa: BLE001
+                logger.exception("Worker %s failed while polling for a job", self.worker_id)
+                time.sleep(self.poll_interval_seconds)
+                continue
+
             if not job:
                 time.sleep(self.poll_interval_seconds)
                 continue
             self._process_job(job)
+
+        logger.info("Worker %s exiting gracefully", self.worker_id)
+
+    def _register_signal_handlers(self) -> None:
+        signal.signal(signal.SIGTERM, self._request_shutdown)
+        signal.signal(signal.SIGINT, self._request_shutdown)
+
+    def _request_shutdown(self, signum: int, _frame: Any) -> None:
+        self._shutdown_requested = True
+        logger.info("Worker %s received signal %s and will shutdown", self.worker_id, signum)
 
     def _connect(self):
         return psycopg2.connect(self.database_url)
@@ -93,20 +121,58 @@ class JobWorker:
                 conn.commit()
 
                 payload = row.get("payload") or {}
+                if not isinstance(payload, dict):
+                    payload = {"value": payload}
+
+                timeout_seconds = row.get("timeout_seconds") or self.default_job_timeout_seconds
+
+                logger.info(
+                    "Worker %s locked job id=%s type=%s attempt=%s",
+                    self.worker_id,
+                    row["id"],
+                    row["type"],
+                    row["attempts"] + 1,
+                )
                 return Job(
                     id=row["id"],
                     type=row["type"],
                     payload=payload,
                     attempts=row["attempts"],
                     max_attempts=row["max_attempts"],
+                    timeout_seconds=timeout_seconds,
                 )
 
     def _process_job(self, job: Job) -> None:
         handler = self._handler_for(job.type)
+        logger.info(
+            "Worker %s processing job id=%s type=%s timeout=%ss",
+            self.worker_id,
+            job.id,
+            job.type,
+            job.timeout_seconds,
+        )
+
         try:
-            handler(job.payload)
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(handler, job.payload)
+                future.result(timeout=job.timeout_seconds)
+
             self._mark_completed(job.id)
+            logger.info("Worker %s completed job id=%s", self.worker_id, job.id)
+        except FuturesTimeoutError:
+            timeout_message = (
+                f"Job id={job.id} type={job.type} exceeded timeout of "
+                f"{job.timeout_seconds}s"
+            )
+            logger.warning(timeout_message)
+            self._mark_failed(job, timeout_message)
         except Exception as exc:  # noqa: BLE001
+            logger.exception(
+                "Worker %s failed job id=%s type=%s",
+                self.worker_id,
+                job.id,
+                job.type,
+            )
             self._mark_failed(job, str(exc))
 
     def _handler_for(self, job_type: str) -> Callable[[Dict[str, Any]], None]:
@@ -120,23 +186,36 @@ class JobWorker:
         }[job_type]
 
     def _handle_unknown(self, payload: Dict[str, Any]) -> None:
-        raise ValueError(f"Unsupported job type: {payload}")
+        raise ValueError(f"Unsupported job type payload={payload}")
 
     def _handle_note_process(self, payload: Dict[str, Any]) -> None:
+        self._validate_payload(payload, ["note_id"])
         self._log_action("NOTE_PROCESS", payload)
 
     def _handle_deal_stage_checklist(self, payload: Dict[str, Any]) -> None:
+        self._validate_payload(payload, ["deal_id", "stage"])
         self._log_action("DEAL_STAGE_CHECKLIST", payload)
 
     def _handle_asset_classify(self, payload: Dict[str, Any]) -> None:
+        self._validate_payload(payload, ["asset_id"])
         self._log_action("ASSET_CLASSIFY", payload)
 
     def _handle_memory_embed(self, payload: Dict[str, Any]) -> None:
+        self._validate_payload(payload, ["memory_id", "text"])
         self._log_action("MEMORY_EMBED", payload)
 
+    def _validate_payload(self, payload: Dict[str, Any], required_keys: list[str]) -> None:
+        missing = [key for key in required_keys if key not in payload]
+        if missing:
+            raise ValueError(f"Missing required payload keys: {', '.join(missing)}")
+
     def _log_action(self, job_type: str, payload: Dict[str, Any]) -> None:
-        message = json.dumps(payload, sort_keys=True)
-        print(f"[{self.worker_id}] Executing {job_type}: {message}")
+        logger.info(
+            "[%s] Executing %s payload=%s",
+            self.worker_id,
+            job_type,
+            json.dumps(payload, sort_keys=True),
+        )
 
     def _mark_completed(self, job_id: int) -> None:
         with self._connect() as conn:
@@ -185,9 +264,37 @@ class JobWorker:
                 )
                 conn.commit()
 
+        logger.info(
+            "Worker %s updated failed job id=%s status=%s attempt=%s next_run_at=%s",
+            self.worker_id,
+            job.id,
+            new_status,
+            next_attempt,
+            next_run_at.isoformat(),
+        )
+
     def _backoff_seconds(self, attempt: int) -> int:
         jitter = random.randint(0, self.backoff_base_seconds)
         return int(self.backoff_base_seconds * (2 ** (attempt - 1)) + jitter)
+
+
+def _validate_job_input(
+    job_type: str,
+    payload: Dict[str, Any],
+    idempotency_key: Optional[str],
+    max_attempts: int,
+    timeout_seconds: int,
+) -> None:
+    if job_type not in JOB_TYPES:
+        raise ValueError(f"Unsupported job type: {job_type}")
+    if not isinstance(payload, dict):
+        raise ValueError("payload must be a JSON object")
+    if max_attempts <= 0:
+        raise ValueError("max_attempts must be > 0")
+    if timeout_seconds <= 0:
+        raise ValueError("timeout_seconds must be > 0")
+    if idempotency_key is not None and not idempotency_key.strip():
+        raise ValueError("idempotency_key cannot be empty when provided")
 
 
 def enqueue_job(
@@ -197,16 +304,30 @@ def enqueue_job(
     idempotency_key: Optional[str] = None,
     run_at: Optional[datetime] = None,
     max_attempts: int = 8,
+    timeout_seconds: int = DEFAULT_JOB_TIMEOUT_SECONDS,
 ) -> int:
-    if job_type not in JOB_TYPES:
-        raise ValueError(f"Unsupported job type: {job_type}")
+    _validate_job_input(
+        job_type=job_type,
+        payload=payload,
+        idempotency_key=idempotency_key,
+        max_attempts=max_attempts,
+        timeout_seconds=timeout_seconds,
+    )
     run_at_value = run_at or datetime.now(timezone.utc)
+
     with psycopg2.connect(database_url) as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 """
-                INSERT INTO jobs (type, payload, idempotency_key, run_at, max_attempts)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO jobs (
+                    type,
+                    payload,
+                    idempotency_key,
+                    run_at,
+                    max_attempts,
+                    timeout_seconds
+                )
+                VALUES (%s, %s, %s, %s, %s, %s)
                 ON CONFLICT (idempotency_key)
                 DO UPDATE SET updated_at = NOW()
                 RETURNING id
@@ -217,10 +338,17 @@ def enqueue_job(
                     idempotency_key,
                     run_at_value,
                     max_attempts,
+                    timeout_seconds,
                 ),
             )
             job_id = cursor.fetchone()[0]
             conn.commit()
+            logger.info(
+                "Enqueued job id=%s type=%s idempotency_key=%s",
+                job_id,
+                job_type,
+                idempotency_key,
+            )
             return job_id
 
 
@@ -228,6 +356,7 @@ def load_worker_from_env() -> JobWorker:
     database_url = os.environ.get("DATABASE_URL")
     if not database_url:
         raise RuntimeError("DATABASE_URL is required")
+
     worker_id = os.environ.get("WORKER_ID", f"worker-{random.randint(1000, 9999)}")
     lock_timeout = int(
         os.environ.get("LOCK_TIMEOUT_SECONDS", DEFAULT_LOCK_TIMEOUT_SECONDS)
@@ -238,15 +367,29 @@ def load_worker_from_env() -> JobWorker:
     backoff_base = int(
         os.environ.get("BACKOFF_BASE_SECONDS", DEFAULT_BACKOFF_BASE_SECONDS)
     )
+    default_timeout = int(
+        os.environ.get("DEFAULT_JOB_TIMEOUT_SECONDS", DEFAULT_JOB_TIMEOUT_SECONDS)
+    )
+
     return JobWorker(
         database_url=database_url,
         worker_id=worker_id,
         lock_timeout_seconds=lock_timeout,
         poll_interval_seconds=poll_interval,
         backoff_base_seconds=backoff_base,
+        default_job_timeout_seconds=default_timeout,
+    )
+
+
+def configure_logging() -> None:
+    log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
+    logging.basicConfig(
+        level=log_level,
+        format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
     )
 
 
 if __name__ == "__main__":
+    configure_logging()
     worker = load_worker_from_env()
     worker.run_forever()
