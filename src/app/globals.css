@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-mab-blue text-mab-ivory antialiased;
+  font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+}
+
+::selection {
+  background: rgba(214, 168, 75, 0.35);
+}
+
+.glow-divider {
+  background: linear-gradient(90deg, rgba(214, 168, 75, 0.1), rgba(214, 168, 75, 0.6), rgba(214, 168, 75, 0.1));
+}
+
+.shimmer-text {
+  background: linear-gradient(110deg, #f6f1e6 0%, #d6a84b 40%, #f6f1e6 80%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
