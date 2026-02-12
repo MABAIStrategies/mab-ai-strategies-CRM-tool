@@ -36,7 +36,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
           <PrimaryButton
             label="Add task"
             variant="outline"
-            href="/tasks/new"
+            href={`/tasks/new?companyId=${deal.companyId}&dealId=${deal.id}${deal.primaryContactId ? `&contactId=${deal.primaryContactId}` : ""}`}
             ariaLabel="Add task"
           />
         </div>

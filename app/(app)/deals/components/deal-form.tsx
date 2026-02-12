@@ -37,12 +37,20 @@ type DealFormData = {
 const buttonClasses =
   "inline-flex items-center justify-center rounded-full px-5 py-2 text-sm font-medium transition bg-mab-navy text-white shadow-glow hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50";
 
-export function DealForm({ initialData }: { initialData?: DealFormData }) {
+export function DealForm({
+  initialData,
+  defaultCompanyId = "",
+  defaultPrimaryContactId = ""
+}: {
+  initialData?: DealFormData;
+  defaultCompanyId?: string;
+  defaultPrimaryContactId?: string;
+}) {
   const router = useRouter();
   const [formData, setFormData] = useState<DealFormData>({
     id: initialData?.id,
-    companyId: initialData?.companyId ?? "",
-    primaryContactId: initialData?.primaryContactId ?? "",
+    companyId: initialData?.companyId ?? defaultCompanyId,
+    primaryContactId: initialData?.primaryContactId ?? defaultPrimaryContactId,
     stage: initialData?.stage ?? dealStages[0],
     value: initialData?.value ?? "",
     probability: initialData?.probability ?? "0",

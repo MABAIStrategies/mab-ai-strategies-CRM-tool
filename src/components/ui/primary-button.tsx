@@ -1,6 +1,7 @@
 "use client";
 
 import clsx from "clsx";
+import type { Route } from "next";
 import Link from "next/link";
 
 export function PrimaryButton({
@@ -28,7 +29,7 @@ export function PrimaryButton({
 
   if (href) {
     return (
-      <Link href={href} className={className} aria-label={ariaLabel ?? label}>
+      <Link href={href as Route} className={className} aria-label={ariaLabel ?? label}>
         {label}
       </Link>
     );

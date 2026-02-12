@@ -19,7 +19,17 @@ type TaskFormData = {
 const buttonClasses =
   "inline-flex items-center justify-center rounded-full px-5 py-2 text-sm font-medium transition bg-mab-navy text-white shadow-glow hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50";
 
-export function TaskForm({ initialData }: { initialData?: TaskFormData }) {
+export function TaskForm({
+  initialData,
+  defaultCompanyId = "",
+  defaultDealId = "",
+  defaultContactId = ""
+}: {
+  initialData?: TaskFormData;
+  defaultCompanyId?: string;
+  defaultDealId?: string;
+  defaultContactId?: string;
+}) {
   const router = useRouter();
   const [formData, setFormData] = useState<TaskFormData>({
     id: initialData?.id,
@@ -27,9 +37,9 @@ export function TaskForm({ initialData }: { initialData?: TaskFormData }) {
     description: initialData?.description ?? "",
     status: initialData?.status ?? "TODO",
     dueAt: initialData?.dueAt ?? "",
-    companyId: initialData?.companyId ?? "",
-    dealId: initialData?.dealId ?? "",
-    contactId: initialData?.contactId ?? ""
+    companyId: initialData?.companyId ?? defaultCompanyId,
+    dealId: initialData?.dealId ?? defaultDealId,
+    contactId: initialData?.contactId ?? defaultContactId
   });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);

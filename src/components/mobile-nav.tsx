@@ -12,7 +12,7 @@ const navItems = [
   { href: "/assets", label: "Assets" },
   { href: "/search", label: "Search" },
   { href: "/finish-line", label: "Finish Line" }
-];
+ ] as const;
 
 export function MobileNav({
   isOpen,

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../../../../src/lib/db";
 import { rateLimit } from "../../../../src/lib/rate-limit";
 
@@ -72,19 +73,7 @@ export async function PUT(
     return NextResponse.json({ error: "Rate limit exceeded." }, { status: 429 });
   }
   const body = await request.json();
-  const data: {
-    companyId?: string;
-    primaryContactId?: string | null;
-    stage?: string;
-    value?: number | null;
-    probability?: number;
-    closeDate?: Date | null;
-    offerType?: string;
-    objections?: string | null;
-    roiDrivers?: string | null;
-    nextStepDate?: Date | null;
-    momentumScore?: number;
-  } = {};
+  const data: Prisma.DealUncheckedUpdateInput = {};
 
   if (body.companyId !== undefined) {
     if (typeof body.companyId !== "string") {

@@ -17,11 +17,17 @@ type ContactFormData = {
 const buttonClasses =
   "inline-flex items-center justify-center rounded-full px-5 py-2 text-sm font-medium transition bg-mab-navy text-white shadow-glow hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50";
 
-export function ContactForm({ initialData }: { initialData?: ContactFormData }) {
+export function ContactForm({
+  initialData,
+  defaultCompanyId = ""
+}: {
+  initialData?: ContactFormData;
+  defaultCompanyId?: string;
+}) {
   const router = useRouter();
   const [formData, setFormData] = useState<ContactFormData>({
     id: initialData?.id,
-    companyId: initialData?.companyId ?? "",
+    companyId: initialData?.companyId ?? defaultCompanyId,
     name: initialData?.name ?? "",
     title: initialData?.title ?? "",
     email: initialData?.email ?? "",

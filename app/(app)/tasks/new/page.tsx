@@ -1,6 +1,10 @@
 import { TaskForm } from "../components/task-form";
 
-export default function NewTaskPage() {
+export default function NewTaskPage({
+  searchParams
+}: {
+  searchParams?: { companyId?: string; dealId?: string; contactId?: string }
+}) {
   return (
     <div className="space-y-8">
       <header>
@@ -10,7 +14,11 @@ export default function NewTaskPage() {
           Schedule the next best action and keep the engagement cadence tight.
         </p>
       </header>
-      <TaskForm />
+      <TaskForm
+        defaultCompanyId={searchParams?.companyId ?? ""}
+        defaultDealId={searchParams?.dealId ?? ""}
+        defaultContactId={searchParams?.contactId ?? ""}
+      />
     </div>
   );
 }

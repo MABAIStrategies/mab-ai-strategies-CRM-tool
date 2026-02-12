@@ -33,13 +33,13 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
           <PrimaryButton
             label="Log task"
             variant="outline"
-            href="/tasks/new"
+            href={`/tasks/new?companyId=${contact.companyId}&contactId=${contact.id}`}
             ariaLabel="Log task"
           />
           <PrimaryButton
             label="Create deal"
             variant="outline"
-            href="/deals/new"
+            href={`/deals/new?companyId=${contact.companyId}&primaryContactId=${contact.id}`}
             ariaLabel="Create deal"
           />
         </div>

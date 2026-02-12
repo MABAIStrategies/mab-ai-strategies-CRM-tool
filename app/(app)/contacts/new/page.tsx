@@ -1,6 +1,10 @@
 import { ContactForm } from "../components/contact-form";
 
-export default function NewContactPage() {
+export default function NewContactPage({
+  searchParams
+}: {
+  searchParams?: { companyId?: string }
+}) {
   return (
     <div className="space-y-8">
       <header>
@@ -10,7 +14,7 @@ export default function NewContactPage() {
           Every relationship touchpoint is tracked for a premium, high-trust experience.
         </p>
       </header>
-      <ContactForm />
+      <ContactForm defaultCompanyId={searchParams?.companyId ?? ""} />
     </div>
   );
 }

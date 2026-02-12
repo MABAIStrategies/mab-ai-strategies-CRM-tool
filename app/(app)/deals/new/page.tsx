@@ -1,6 +1,10 @@
 import { DealForm } from "../components/deal-form";
 
-export default function NewDealPage() {
+export default function NewDealPage({
+  searchParams
+}: {
+  searchParams?: { companyId?: string; primaryContactId?: string }
+}) {
   return (
     <div className="space-y-8">
       <header>
@@ -10,7 +14,10 @@ export default function NewDealPage() {
           Capture the offer, timeline, and ROI drivers so every step feels premium and confident.
         </p>
       </header>
-      <DealForm />
+      <DealForm
+        defaultCompanyId={searchParams?.companyId ?? ""}
+        defaultPrimaryContactId={searchParams?.primaryContactId ?? ""}
+      />
     </div>
   );
 }
