@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { prisma } from "./lib/db";
-import { claimNextJob, updateJobStatus } from "./lib/queue";
+import { claimNextJob, enqueueJob, updateJobStatus } from "./lib/queue";
 import { getAIProvider, logValidationError, sanitizeInput } from "./lib/ai-provider";
 import { structuredExtractSchema } from "./lib/extract";
+import { scheduleDueIntegrationSyncs, syncGoogleWorkspace } from "./lib/mcp/google-workspace";
 
 const ai = getAIProvider();
 
@@ -24,7 +25,9 @@ const jobSchemas = {
   }),
   ASSET_CLASSIFY: z.object({ assetId: z.string() }),
   MEMORY_EMBED: z.object({ memoryItemId: z.string(), text: z.string() }),
-  TEMPLATE_GENERATE: z.object({ templateId: z.string() })
+  TEMPLATE_GENERATE: z.object({ templateId: z.string() }),
+  MCP_SYNC_GOOGLE_WORKSPACE: z.object({ connectionId: z.string() }),
+  MCP_SYNC_SCHEDULE: z.object({})
 };
 
 type JobType = keyof typeof jobSchemas;
@@ -127,15 +130,48 @@ async function handleTemplateGenerate(payload: Record<string, unknown>) {
   });
 }
 
+
+
+async function handleGoogleWorkspaceSync(payload: Record<string, unknown>) {
+  const { connectionId } = jobSchemas.MCP_SYNC_GOOGLE_WORKSPACE.parse(payload);
+  await syncGoogleWorkspace(connectionId);
+}
+
+async function handleSyncSchedule(payload: Record<string, unknown>) {
+  jobSchemas.MCP_SYNC_SCHEDULE.parse(payload);
+  await scheduleDueIntegrationSyncs();
+  const runAt = new Date(Date.now() + 5 * 60 * 1000);
+  await enqueueJob({
+    type: "MCP_SYNC_SCHEDULE",
+    payload: {},
+    idempotencyKey: `mcp-sync-schedule-${Math.floor(runAt.getTime() / (5 * 60 * 1000))}`,
+    runAt
+  });
+}
+
 const handlers: Record<JobType, (payload: Record<string, unknown>) => Promise<void>> = {
   NOTE_PROCESS: handleNoteProcess,
   DEAL_STAGE_CHECKLIST: handleDealStageChecklist,
   ASSET_CLASSIFY: handleAssetClassify,
   MEMORY_EMBED: handleMemoryEmbed,
-  TEMPLATE_GENERATE: handleTemplateGenerate
+  TEMPLATE_GENERATE: handleTemplateGenerate,
+  MCP_SYNC_GOOGLE_WORKSPACE: handleGoogleWorkspaceSync,
+  MCP_SYNC_SCHEDULE: handleSyncSchedule
 };
 
+async function bootstrapScheduler() {
+  const runAt = new Date(Date.now() + 30 * 1000);
+  await enqueueJob({
+    type: "MCP_SYNC_SCHEDULE",
+    payload: {},
+    idempotencyKey: `mcp-sync-schedule-${Math.floor(runAt.getTime() / (5 * 60 * 1000))}`,
+    runAt
+  });
+}
+
 async function runWorker() {
+  await bootstrapScheduler();
+
   process.on("SIGTERM", () => {
     shouldStop = true;
     logInfo("SIGTERM received. Finishing current job before shutdown.");
