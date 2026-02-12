@@ -283,7 +283,7 @@ model MemoryItem {
   dealId         String?
   contactId      String?
   extractedFacts Json
-  embedding      Bytes?
+  embedding      Unsupported("vector")? @map("embedding")
   searchText     String?
   createdBy      String?
   updatedBy      String?
