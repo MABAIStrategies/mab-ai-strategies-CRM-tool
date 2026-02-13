@@ -3,14 +3,16 @@ import { ReactNode } from "react";
 export function Card({
   title,
   subtitle,
-  children
+  children,
+  className
 }: {
   title: string;
   subtitle?: string;
   children: ReactNode;
+  className?: string;
 }) {
   return (
-    <section className="glass-card rounded-2xl p-6">
+    <section className={`glass-card rounded-2xl p-6 ${className ?? ""}`.trim()}>
       <div className="flex items-start justify-between">
         <div>
           <h3 className="text-lg font-semibold text-mab-navy">{title}</h3>
