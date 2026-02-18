@@ -356,12 +356,13 @@ const openAIProvider: AIProvider = {
 
 export function logValidationError(error: unknown, context: string) {
   if (error instanceof z.ZodError) {
+    const validationError = error as { issues?: unknown[] };
     console.error(
       JSON.stringify({
         level: "error",
         message: "Validation error",
         context,
-        issues: error.issues
+        issues: validationError.issues
       })
     );
     return;
