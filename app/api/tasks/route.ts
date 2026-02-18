@@ -36,27 +36,24 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const rate = rateLimit("tasks", 20, 60000);
-  if (!rate.allowed) {
-    return NextResponse.json({ error: "Rate limit exceeded." }, { status: 429 });
-  }
-
   const body = await request.json();
-  if (!body.title || typeof body.title !== "string") {
-    return NextResponse.json({ error: "title is required." }, { status: 400 });
-  }
+  const payload = Array.isArray(body.tasks) ? body.tasks : [body];
 
-  const task = await prisma.task.create({
-    data: {
-      title: body.title,
-      description: body.description ?? null,
-      companyId: body.companyId ?? null,
-      dealId: body.dealId ?? null,
-      contactId: body.contactId ?? null,
-      dueAt: body.dueAt ? new Date(body.dueAt) : null,
-      status: body.status ?? "TODO"
-    }
-  });
+  const tasks = await prisma.$transaction(
+    payload.map((task) =>
+      prisma.task.create({
+        data: {
+          companyId: task.companyId ?? "demo-company",
+          dealId: task.dealId ?? null,
+          contactId: task.contactId ?? null,
+          title: task.title,
+          description: task.description,
+          dueAt: task.dueAt ? new Date(task.dueAt) : null,
+          status: task.status ?? "TODO"
+        }
+      })
+    )
+  );
 
-  return NextResponse.json({ task }, { status: 201 });
+  return NextResponse.json({ tasks });
 }

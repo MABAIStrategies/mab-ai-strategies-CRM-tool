@@ -38,34 +38,24 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const rate = rateLimit("activities", 20, 60000);
-  if (!rate.allowed) {
-    return NextResponse.json({ error: "Rate limit exceeded." }, { status: 429 });
-  }
-
   const body = await request.json();
-  if (!body.companyId) {
-    return NextResponse.json({ error: "companyId is required." }, { status: 400 });
-  }
-  if (!body.type) {
-    return NextResponse.json({ error: "type is required." }, { status: 400 });
-  }
+  const payload = Array.isArray(body.activities) ? body.activities : [body];
 
-  const activity = await prisma.activity.create({
-    data: {
-      companyId: body.companyId,
-      dealId: body.dealId ?? null,
-      contactId: body.contactId ?? null,
-      type: body.type,
-      occurredAt: body.occurredAt ? new Date(body.occurredAt) : new Date(),
-      durationMinutes: body.durationMinutes ?? null,
-      outcome: body.outcome ?? null
-    },
-    include: {
-      company: { select: { id: true, name: true } },
-      contact: { select: { id: true, name: true } }
-    }
-  });
+  const activities = await prisma.$transaction(
+    payload.map((activity) =>
+      prisma.activity.create({
+        data: {
+          companyId: activity.companyId ?? "demo-company",
+          dealId: activity.dealId ?? null,
+          contactId: activity.contactId ?? null,
+          type: activity.type,
+          occurredAt: new Date(activity.occurredAt),
+          durationMinutes: activity.durationMinutes,
+          outcome: activity.outcome
+        }
+      })
+    )
+  );
 
-  return NextResponse.json({ activity }, { status: 201 });
+  return NextResponse.json({ activities });
 }
