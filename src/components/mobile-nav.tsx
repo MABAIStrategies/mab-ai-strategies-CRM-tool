@@ -2,9 +2,17 @@
 
 import Link from "next/link";
 import { useBrandingAssets } from "./use-branding-assets";
+<<<<<<< codex/connect-mcp-to-fetch-brand-assets-rim7ae
+=======
+import { usePathname } from "next/navigation";
+>>>>>>> main
 
 const navItems = [
   { href: "/today", label: "Today" },
+  { href: "/pipeline", label: "Pipeline" },
+  { href: "/companies", label: "Companies" },
+  { href: "/contacts", label: "Contacts" },
+  { href: "/outreach", label: "Outreach" },
   { href: "/workspace", label: "Workspace" },
   { href: "/assets", label: "Assets" },
   { href: "/search", label: "Search" },
@@ -19,6 +27,10 @@ export function MobileNav({
   onClose: () => void;
 }) {
   const { assets } = useBrandingAssets();
+<<<<<<< codex/connect-mcp-to-fetch-brand-assets-rim7ae
+=======
+  const pathname = usePathname();
+>>>>>>> main
 
   if (!isOpen) {
     return null;
@@ -48,22 +60,34 @@ export function MobileNav({
             Close
           </button>
         </div>
-        <nav className="mt-10 space-y-3 text-base">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onClose}
-              className="block rounded-xl border border-mab-gold/20 bg-white px-4 py-3 text-mab-navy shadow-sm"
-            >
-              {item.label}
-            </Link>
-          ))}
+        <nav className="space-y-1 text-sm">
+          {navItems.map((item) => {
+            const active = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onClose}
+                className={`block rounded-xl px-4 py-2.5 transition ${
+                  active
+                    ? "bg-mab-navy text-white"
+                    : "text-mab-slate hover:bg-mab-navy/10"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
-        <div className="mt-auto rounded-2xl border border-mab-gold/30 bg-mab-navy px-4 py-5 text-sm text-white shadow-glow">
-          <p className="font-medium">Compliance mode</p>
-          <p className="mt-1 text-xs text-white/70">Outbound automation disabled. Confirmation required.</p>
-        </div>
+        <button
+          onClick={async () => {
+            await fetch("/api/auth/logout", { method: "POST" });
+            window.location.href = "/login";
+          }}
+          className="mt-6 w-full rounded-xl px-4 py-2 text-left text-xs text-mab-slate transition hover:bg-red-50 hover:text-red-600"
+        >
+          Sign out
+        </button>
       </div>
     </div>
   );

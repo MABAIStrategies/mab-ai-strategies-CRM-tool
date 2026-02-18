@@ -5,6 +5,10 @@ import { useBrandingAssets } from "./use-branding-assets";
 
 const navItems = [
   { href: "/today", label: "Today" },
+  { href: "/pipeline", label: "Pipeline" },
+  { href: "/companies", label: "Companies" },
+  { href: "/contacts", label: "Contacts" },
+  { href: "/outreach", label: "Outreach" },
   { href: "/workspace", label: "Workspace" },
   { href: "/assets", label: "Assets" },
   { href: "/search", label: "Search" },
@@ -27,21 +31,45 @@ export function Sidebar() {
           <p className="text-lg font-semibold text-mab-navy">Strategies CRM</p>
         </div>
       </div>
-      <nav className="mt-10 space-y-2 text-sm">
-        {navItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="group flex items-center justify-between rounded-xl px-4 py-3 text-mab-slate transition hover:bg-mab-navy/90 hover:text-white"
-          >
-            {item.label}
-            <span className="h-2 w-2 rounded-full bg-mab-gold opacity-0 transition group-hover:opacity-100" />
-          </Link>
-        ))}
+      <nav className="mt-10 space-y-1 text-sm">
+        {navItems.map((item) => {
+          const active = pathname === item.href || pathname?.startsWith(item.href + "/");
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`group flex items-center justify-between rounded-xl px-4 py-2.5 transition ${
+                active
+                  ? "bg-mab-navy text-white"
+                  : "text-mab-slate hover:bg-mab-navy/90 hover:text-white"
+              }`}
+            >
+              {item.label}
+              <span
+                className={`h-2 w-2 rounded-full bg-mab-gold transition ${
+                  active ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                }`}
+              />
+            </Link>
+          );
+        })}
       </nav>
-      <div className="mt-auto rounded-2xl border border-mab-gold/30 bg-mab-navy px-4 py-5 text-sm text-white shadow-glow">
-        <p className="font-medium">Compliance mode</p>
-        <p className="mt-1 text-xs text-white/70">Outbound automation disabled. Confirmation required.</p>
+      <div className="mt-auto space-y-3">
+        <div className="rounded-2xl border border-mab-gold/30 bg-mab-navy px-4 py-4 text-sm text-white shadow-glow">
+          <p className="font-medium">Compliance mode</p>
+          <p className="mt-1 text-xs text-white/70">
+            Outbound automation disabled. Confirmation required.
+          </p>
+        </div>
+        <button
+          onClick={async () => {
+            await fetch("/api/auth/logout", { method: "POST" });
+            window.location.href = "/login";
+          }}
+          className="w-full rounded-xl px-4 py-2 text-left text-xs text-mab-slate transition hover:bg-red-50 hover:text-red-600"
+        >
+          Sign out
+        </button>
       </div>
     </aside>
   );
