@@ -1,9 +1,11 @@
 "use client";
 
 import { useCommandPalette } from "./use-command-palette";
+import { useBrandingAssets } from "./use-branding-assets";
 
 export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
   const { open } = useCommandPalette();
+  const { assets } = useBrandingAssets();
 
   return (
     <header className="sticky top-0 z-40 flex items-center justify-between border-b border-white/60 bg-white/80 px-6 py-4 backdrop-blur">
@@ -31,7 +33,7 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
           <p className="text-sm font-semibold text-mab-navy">MAB Strategist</p>
         </div>
         <img
-          src="/branding/mab-headshot.svg"
+          src={assets.headshot.uri}
           alt="Professional headshot"
           className="h-10 w-10 rounded-full border-2 border-mab-gold object-cover"
         />

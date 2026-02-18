@@ -1,6 +1,6 @@
 {
   "name": "mab-crm",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,11 +9,13 @@
     "start": "next start",
     "lint": "next lint",
     "db:generate": "prisma generate",
+    "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "ts-node --transpile-only prisma/seed.ts",
     "worker": "ts-node --transpile-only src/worker.ts",
     "test": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "postinstall": "prisma generate || true"
   },
   "dependencies": {
     "@prisma/client": "^5.19.1",

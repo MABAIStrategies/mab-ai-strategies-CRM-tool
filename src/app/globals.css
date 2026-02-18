@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-brand-midnight text-brand-ivory antialiased;
+}
+
+.brand-panel {
+  @apply rounded-3xl border border-white/5 bg-brand-deep/80 shadow-lg backdrop-blur;
+}
+
+.gold-divider {
+  @apply h-px bg-gradient-to-r from-transparent via-brand-gold/60 to-transparent;
+}
+
+.nav-link {
+  @apply flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-brand-ivory/70 transition-all hover:text-brand-ivory;
+}
+
+.nav-link-active {
+  @apply bg-brand-gold/15 text-brand-ivory shadow-[0_0_18px_rgba(216,180,92,0.2)];
+}
