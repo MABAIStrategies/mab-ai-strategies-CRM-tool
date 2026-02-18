@@ -3,6 +3,7 @@ import { prisma } from "./lib/db";
 import { claimNextJob, updateJobStatus } from "./lib/queue";
 import { getAIProvider, logValidationError, sanitizeInput } from "./lib/ai-provider";
 import { structuredExtractSchema } from "./lib/extract";
+import { syncMemoryFromAsset, syncMemoryFromNote } from "./lib/memory";
 
 const ai = getAIProvider();
 
@@ -74,10 +75,12 @@ async function handleNoteProcess(payload: Record<string, unknown>) {
   }
   const extract = structuredExtractSchema.parse(extractResult);
 
-  await prisma.note.update({
+  const updatedNote = await prisma.note.update({
     where: { id: noteId },
     data: { summary, structuredExtract: extract }
   });
+
+  await syncMemoryFromNote({ note: updatedNote, summary, extract });
 }
 
 async function handleDealStageChecklist(payload: Record<string, unknown>) {
@@ -93,10 +96,12 @@ async function handleDealStageChecklist(payload: Record<string, unknown>) {
 
 async function handleAssetClassify(payload: Record<string, unknown>) {
   const { assetId } = jobSchemas.ASSET_CLASSIFY.parse(payload);
-  await prisma.asset.update({
+  const asset = await prisma.asset.update({
     where: { id: assetId },
     data: { tags: ["Auto-tagged"], status: "APPROVED" }
   });
+
+  await syncMemoryFromAsset(asset);
 }
 
 async function handleMemoryEmbed(payload: Record<string, unknown>) {
