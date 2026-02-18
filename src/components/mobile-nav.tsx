@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useBrandingAssets } from "./use-branding-assets";
+<<<<<<< codex/connect-mcp-to-fetch-brand-assets-rim7ae
+=======
 import { usePathname } from "next/navigation";
+>>>>>>> main
 
 const navItems = [
   { href: "/today", label: "Today" },
@@ -24,7 +27,10 @@ export function MobileNav({
   onClose: () => void;
 }) {
   const { assets } = useBrandingAssets();
+<<<<<<< codex/connect-mcp-to-fetch-brand-assets-rim7ae
+=======
   const pathname = usePathname();
+>>>>>>> main
 
   if (!isOpen) {
     return null;

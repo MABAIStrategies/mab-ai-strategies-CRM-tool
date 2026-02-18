@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useBrandingAssets } from "./use-branding-assets";
-import { usePathname } from "next/navigation";
 
 const navItems = [
   { href: "/today", label: "Today" },
@@ -18,7 +17,6 @@ const navItems = [
 
 export function Sidebar() {
   const { assets } = useBrandingAssets();
-  const pathname = usePathname();
 
   return (
     <aside className="hidden w-64 flex-col border-r border-white/60 bg-white/70 px-4 pb-6 pt-6 shadow-sm lg:flex">
