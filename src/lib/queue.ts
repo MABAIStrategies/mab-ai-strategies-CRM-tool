@@ -1,6 +1,7 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 
-export type JobPayload = Record<string, unknown>;
+export type JobPayload = Prisma.InputJsonValue;
 
 export function buildIdempotencyKey(type: string, sourceId: string) {
   return `${type.toLowerCase()}-${sourceId}`;
