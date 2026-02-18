@@ -7,7 +7,7 @@ export function Card({
 }: {
   title: string;
   subtitle?: string;
-  children: ReactNode;
+  children?: ReactNode;
 }) {
   return (
     <section className="glass-card rounded-2xl p-6">

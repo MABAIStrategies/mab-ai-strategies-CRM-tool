@@ -30,18 +30,50 @@ export default async function WorkspacePage() {
       <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.35em] text-mab-gold">Workspace</p>
-          <h1 className="text-3xl font-semibold text-mab-navy">Westbridge Capital</h1>
-          <p className="mt-2 text-sm text-mab-slate">
-            Deal stage: Discovery Completed · Momentum 92 · Next step: ROI inputs by Friday
-          </p>
+          <h1 className="text-3xl font-semibold text-mab-navy">
+            {current ? current.company.name : "Select a Deal"}
+          </h1>
+          {current && (
+            <p className="mt-2 text-sm text-mab-slate">
+              Deal stage: {current.stage.replace(/_/g, " ")} · Momentum {current.momentumScore} · {current.offerType}
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-3">
-          <PrimaryButton label="Advance stage" href="/workspace/advance" ariaLabel="Advance deal stage" />
-          <PrimaryButton label="Log activity" variant="outline" href="/workspace/activity" ariaLabel="Log activity" />
+          <select
+            value={selectedDeal}
+            onChange={(e) => setSelectedDeal(e.target.value)}
+            className="rounded-xl border border-mab-navy/10 bg-white px-4 py-2 text-sm focus:border-mab-gold focus:outline-none"
+          >
+            {deals.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.company.name} — {d.offerType}
+              </option>
+            ))}
+          </select>
+          {current && (
+            <a
+              href={`/deals/${current.id}`}
+              className="inline-flex items-center rounded-xl bg-mab-navy px-5 py-2 text-sm font-medium text-white transition hover:bg-mab-gold hover:text-mab-navy"
+            >
+              Open Deal
+            </a>
+          )}
         </div>
       </header>
 
-      <RapidCapture />
+      {loading ? (
+        <div className="py-20 text-center text-mab-slate">Loading...</div>
+      ) : deals.length === 0 ? (
+        <div className="py-20 text-center text-mab-slate">
+          <p>No deals yet.</p>
+          <a href="/deals/new" className="mt-2 inline-block text-mab-gold hover:underline">
+            Create your first deal
+          </a>
+        </div>
+      ) : (
+        <>
+          <RapidCapture />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card title="Recent activity" subtitle="Live signals from inbox + calendar">

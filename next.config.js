@@ -1,11 +1,6 @@
 /** @type {import('next').NextConfig} */
-const scriptSrc = "script-src 'self';";
-const fontSrc = "font-src 'self';";
 const nextConfig = {
   reactStrictMode: true,
-  experimental: {
-    typedRoutes: true
-  },
   async headers() {
     return [
       {
@@ -13,8 +8,16 @@ const nextConfig = {
         headers: [
           {
             key: "Content-Security-Policy",
-            value:
-              `default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; ${scriptSrc} connect-src 'self'; ${fontSrc} frame-ancestors 'none'; base-uri 'self';`
+            value: [
+              "default-src 'self'",
+              "img-src 'self' data: https:",
+              "style-src 'self' 'unsafe-inline'",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+              "connect-src 'self' https:",
+              "font-src 'self'",
+              "frame-ancestors 'none'",
+              "base-uri 'self'"
+            ].join("; ")
           },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "X-Content-Type-Options", value: "nosniff" },

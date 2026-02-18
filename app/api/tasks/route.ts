@@ -1,12 +1,37 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../src/lib/db";
+import { rateLimit } from "../../../src/lib/rate-limit";
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+export async function GET(request: Request) {
+  const rate = rateLimit("tasks", 30, 60000);
+  if (!rate.allowed) {
+    return NextResponse.json({ error: "Rate limit exceeded." }, { status: 429 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const companyId = searchParams.get("companyId");
+  const dealId = searchParams.get("dealId");
+  const status = searchParams.get("status");
+
+  const where = {
+    deletedAt: null,
+    ...(companyId ? { companyId } : {}),
+    ...(dealId ? { dealId } : {}),
+    ...(status ? { status: status as never } : {})
+  };
+
   const tasks = await prisma.task.findMany({
-    where: { deletedAt: null },
-    orderBy: { createdAt: "desc" },
-    take: 8
+    where,
+    include: {
+      company: { select: { id: true, name: true } },
+      deal: { select: { id: true, title: true } },
+      contact: { select: { id: true, name: true } }
+    },
+    orderBy: [{ status: "asc" }, { dueAt: "asc" }, { createdAt: "desc" }]
   });
+
   return NextResponse.json({ tasks });
 }
 
