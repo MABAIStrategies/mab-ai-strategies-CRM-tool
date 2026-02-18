@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useBrandingAssets } from "./use-branding-assets";
 import { usePathname } from "next/navigation";
 
 const navItems = [
@@ -16,15 +17,16 @@ const navItems = [
 ];
 
 export function Sidebar() {
+  const { assets } = useBrandingAssets();
   const pathname = usePathname();
 
   return (
     <aside className="hidden w-64 flex-col border-r border-white/60 bg-white/70 px-4 pb-6 pt-6 shadow-sm lg:flex">
       <div className="flex items-center gap-3">
         <img
-          src="/branding/mab-logo.svg"
-          alt="MAB AI Strategies official logo"
-          className="h-10 w-10 rounded-xl border border-mab-gold/40 bg-mab-navy object-cover shadow-sm"
+          src={assets.logo.primary.uri}
+          alt="MAB AI Strategies logo"
+          className="h-10 w-10"
         />
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-mab-gold">MAB AI</p>

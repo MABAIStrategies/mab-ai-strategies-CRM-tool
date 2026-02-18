@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useBrandingAssets } from "./use-branding-assets";
 import { usePathname } from "next/navigation";
 
 const navItems = [
@@ -22,17 +23,34 @@ export function MobileNav({
   isOpen: boolean;
   onClose: () => void;
 }) {
+  const { assets } = useBrandingAssets();
   const pathname = usePathname();
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
   return (
-    <div className="fixed inset-0 z-50 lg:hidden">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="absolute left-0 top-0 h-full w-72 bg-white p-6 shadow-lg">
-        <div className="mb-6 flex items-center justify-between">
-          <p className="text-lg font-semibold text-mab-navy">MAB CRM</p>
-          <button onClick={onClose} className="text-mab-slate">
+    <div className="fixed inset-0 z-50 bg-mab-navy/70 backdrop-blur lg:hidden">
+      <div className="flex h-full flex-col bg-mab-ivory px-6 py-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img
+              src={assets.logo.primary.uri}
+              alt="MAB AI Strategies logo"
+              className="h-10 w-10"
+            />
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-mab-gold">MAB AI</p>
+              <p className="text-lg font-semibold text-mab-navy">Strategies CRM</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close navigation"
+            className="rounded-full border border-mab-gold/40 px-3 py-1 text-xs text-mab-navy"
+          >
             Close
           </button>
         </div>
