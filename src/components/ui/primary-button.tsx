@@ -10,7 +10,8 @@ export function PrimaryButton({
   onClick,
   href,
   ariaLabel,
-  disabled = false
+  disabled = false,
+  type = "button"
 }: {
   label: string;
   variant?: "solid" | "outline";
@@ -18,6 +19,7 @@ export function PrimaryButton({
   href?: string;
   ariaLabel?: string;
   disabled?: boolean;
+  type?: "button" | "submit" | "reset";
 }) {
   const { assets } = useBrandingAssets();
   const className = clsx(
@@ -53,7 +55,7 @@ export function PrimaryButton({
 
   return (
     <button
-      type="button"
+      type={type}
       onClick={onClick}
       className={className}
       aria-label={ariaLabel ?? label}

@@ -3,6 +3,19 @@ import { prisma } from "../../../src/lib/db";
 import { enqueueJob } from "../../../src/lib/queue";
 import { rateLimit } from "../../../src/lib/rate-limit";
 
+const mapTemplateOutputToAssetType = (outputType: string) => {
+  switch (outputType) {
+    case "EMAIL":
+      return "SCRIPT";
+    case "DOC":
+      return "TEMPLATE";
+    case "PROPOSAL":
+      return "PROPOSAL";
+    default:
+      return "OTHER";
+  }
+};
+
 export async function GET(request: Request) {
   const origin = request.headers.get("origin");
   const csrfToken = request.headers.get("x-csrf-token");
@@ -52,13 +65,25 @@ export async function POST(request: Request) {
     }
   });
 
-  await enqueueJob({
-    type: "TEMPLATE_GENERATE",
-    payload: { templateId: template.id },
-    idempotencyKey: `template-generate-${template.id}`
+  const asset = await prisma.asset.create({
+    data: {
+      type: mapTemplateOutputToAssetType(template.outputType),
+      title: `${template.name} Output`,
+      description: template.description ?? "Auto-generated asset pending draft content.",
+      tags: ["Generating", "Template"],
+      version: "1.0",
+      status: "DRAFT",
+      storageUri: "local://generated/pending"
+    }
   });
 
-  const response = NextResponse.json({ template });
+  await enqueueJob({
+    type: "TEMPLATE_GENERATE",
+    payload: { templateId: template.id, assetId: asset.id },
+    idempotencyKey: `template-generate-${template.id}-${asset.id}`
+  });
+
+  const response = NextResponse.json({ template, asset });
   response.headers.set("Access-Control-Allow-Origin", "*");
   response.headers.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   response.headers.set("Access-Control-Allow-Headers", "Content-Type");
