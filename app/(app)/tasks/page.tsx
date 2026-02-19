@@ -3,8 +3,8 @@ import { prisma } from "../../../src/lib/db";
 import { Card } from "../../../src/components/ui/card";
 import { PrimaryButton } from "../../../src/components/ui/primary-button";
 
-export default async function ContactsPage() {
-  const contacts = await prisma.contact.findMany({
+export default async function TasksPage() {
+  const tasks = await prisma.task.findMany({
     where: { deletedAt: null },
     orderBy: { createdAt: "desc" },
     include: { company: true }
@@ -14,46 +14,46 @@ export default async function ContactsPage() {
     <div className="space-y-8">
       <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.35em] text-mab-gold">Contacts</p>
-          <h1 className="text-3xl font-semibold text-mab-navy">Relationship Intelligence Hub</h1>
+          <p className="text-sm uppercase tracking-[0.35em] text-mab-gold">Tasks</p>
+          <h1 className="text-3xl font-semibold text-mab-navy">Momentum Taskboard</h1>
           <p className="mt-2 text-sm text-mab-slate">
-            Map champions, gatekeepers, and stakeholders with detail-rich profiles that elevate every interaction.
+            Keep every action synchronized with your MAB playbook and aligned to account urgency.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <PrimaryButton label="Create contact" href="/contacts/new" ariaLabel="Create contact" />
+          <PrimaryButton label="Create task" href="/tasks/new" ariaLabel="Create task" />
           <PrimaryButton
-            label="Start outreach"
+            label="Open today"
             variant="outline"
-            href="/tasks/new"
-            ariaLabel="Start outreach"
+            href="/today"
+            ariaLabel="Open today"
           />
         </div>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card title="Priority connections" subtitle="Engagement-ready stakeholders">
+        <Card title="Task intensity" subtitle="Live productivity pulse">
           <ul className="space-y-3 text-sm text-mab-slate">
-            <li>Relationship depth scoring enabled</li>
-            <li>Next best action auto-suggested</li>
-            <li>LinkedIn context pulled into CRM</li>
+            <li>Open tasks: {tasks.length}</li>
+            <li>AI reminders enabled</li>
+            <li>Compliance gating always on</li>
           </ul>
           <div className="mt-4">
-            <PrimaryButton label="View tasks" href="/tasks" ariaLabel="View tasks" />
+            <PrimaryButton label="Open workspace" href="/workspace" ariaLabel="Open workspace" />
           </div>
         </Card>
-        <Card title="Active contacts" subtitle="Tap to open dossiers">
-          {contacts.length ? (
+        <Card title="Active tasks" subtitle="Tap to open details">
+          {tasks.length ? (
             <ul className="space-y-3 text-sm">
-              {contacts.map((contact) => (
-                <li key={contact.id}>
+              {tasks.map((task) => (
+                <li key={task.id}>
                   <Link
-                    href={`/contacts/${contact.id}`}
+                    href={`/tasks/${task.id}`}
                     className="block rounded-2xl border border-mab-gold/20 bg-white px-4 py-3 text-mab-navy shadow-sm transition hover:-translate-y-0.5 hover:bg-mab-navy hover:text-white"
                   >
-                    <p className="font-medium">{contact.name}</p>
+                    <p className="font-medium">{task.title}</p>
                     <p className="text-xs text-mab-slate">
-                      {contact.title ?? "Title pending"} · {contact.company?.name ?? "No company"}
+                      {task.company?.name ?? "No company"} · {task.status}
                     </p>
                   </Link>
                 </li>
@@ -61,25 +61,25 @@ export default async function ContactsPage() {
             </ul>
           ) : (
             <div className="rounded-2xl border border-dashed border-mab-gold/40 bg-white px-4 py-6 text-sm text-mab-slate">
-              No contacts yet. Add your first stakeholder to begin relationship mapping.
+              No tasks yet. Create your first action to maintain momentum.
             </div>
           )}
         </Card>
-        <Card title="Personalization control" subtitle="MAB AI cadence">
+        <Card title="Engagement cadence" subtitle="MAB interactions">
           <div className="space-y-4 text-sm text-mab-slate">
-            <p>Activate tailored narrative arcs and keep every outreach sequence on-brand.</p>
+            <p>Balance outbound, follow-ups, and internal prep with a focused MAB rhythm.</p>
             <div className="flex flex-wrap gap-3">
               <PrimaryButton
-                label="Open assets"
+                label="View companies"
                 variant="outline"
-                href="/assets"
-                ariaLabel="Open assets"
+                href="/companies"
+                ariaLabel="View companies"
               />
               <PrimaryButton
-                label="Open search"
+                label="View contacts"
                 variant="outline"
-                href="/search"
-                ariaLabel="Open search"
+                href="/contacts"
+                ariaLabel="View contacts"
               />
             </div>
           </div>

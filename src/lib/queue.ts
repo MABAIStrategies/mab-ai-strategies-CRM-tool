@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
+import type { Prisma } from "@prisma/client";
 
 export type JobPayload = Prisma.InputJsonValue;
 
@@ -23,7 +24,7 @@ export async function enqueueJob({
     update: {},
     create: {
       type,
-      payload,
+      payload: payload as Prisma.InputJsonValue,
       idempotencyKey,
       runAt
     }

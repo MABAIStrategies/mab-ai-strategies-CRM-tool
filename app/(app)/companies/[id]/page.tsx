@@ -1,240 +1,118 @@
-"use client";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { prisma } from "../../../../src/lib/db";
+import { Card } from "../../../../src/components/ui/card";
+import { PrimaryButton } from "../../../../src/components/ui/primary-button";
 
-import { useEffect, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
-
-type Contact = {
-  id: string;
-  name: string;
-  title: string | null;
-  email: string | null;
-  phone: string | null;
-  relationshipStrength: number;
-  source: string | null;
-};
-
-type Deal = {
-  id: string;
-  title: string | null;
-  stage: string;
-  value: number | null;
-  offerType: string;
-  momentumScore: number;
-  primaryContact: { name: string } | null;
-};
-
-type Activity = {
-  id: string;
-  type: string;
-  occurredAt: string;
-  outcome: string | null;
-  contact: { name: string } | null;
-};
-
-type Company = {
-  id: string;
-  name: string;
-  domain: string | null;
-  industry: string | null;
-  region: string | null;
-  icpTags: string[];
-  riskFlags: string[];
-  notesSummary: string | null;
-  enrichedData: Record<string, unknown> | null;
-  contacts: Contact[];
-  deals: Deal[];
-  activities: Activity[];
-};
-
-export default function CompanyDetailPage() {
-  const params = useParams();
-  const id = params.id as string;
-  const [company, setCompany] = useState<Company | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [contactForm, setContactForm] = useState({
-    name: "",
-    email: "",
-    title: "",
-    phone: ""
-  });
-  const [showContactForm, setShowContactForm] = useState(false);
-
-  const fetchCompany = useCallback(async () => {
-    const res = await fetch(`/api/companies/${id}`);
-    if (res.ok) {
-      const data = await res.json();
-      setCompany(data.company);
+export default async function CompanyDetailPage({ params }: { params: { id: string } }) {
+  const company = await prisma.company.findFirst({
+    where: { id: params.id, deletedAt: null },
+    include: {
+      contacts: { where: { deletedAt: null }, orderBy: { createdAt: "desc" } },
+      deals: { where: { deletedAt: null }, orderBy: { createdAt: "desc" } },
+      tasks: { where: { deletedAt: null }, orderBy: { createdAt: "desc" } }
     }
-    setLoading(false);
-  }, [id]);
+  });
 
-  useEffect(() => {
-    fetchCompany();
-  }, [fetchCompany]);
-
-  const addContact = async () => {
-    if (!contactForm.name.trim()) return;
-    await fetch("/api/contacts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...contactForm, companyId: id })
-    });
-    setContactForm({ name: "", email: "", title: "", phone: "" });
-    setShowContactForm(false);
-    fetchCompany();
-  };
-
-  const scrapeEmails = async () => {
-    if (!company?.domain) return;
-    await fetch("/api/scrape", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ domain: company.domain, companyId: id })
-    });
-    fetchCompany();
-  };
-
-  const enrichCompany = async () => {
-    await fetch("/api/enrich", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ companyId: id })
-    });
-    fetchCompany();
-  };
-
-  if (loading) {
-    return <div className="py-20 text-center text-mab-slate">Loading...</div>;
-  }
   if (!company) {
-    return <div className="py-20 text-center text-mab-slate">Company not found.</div>;
+    notFound();
   }
-
-  const enriched = company.enrichedData ?? {};
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div className="space-y-8">
+      <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <a href="/companies" className="text-xs text-mab-gold hover:underline">
-            ← Companies
-          </a>
+          <p className="text-sm uppercase tracking-[0.35em] text-mab-gold">Company dossier</p>
           <h1 className="text-3xl font-semibold text-mab-navy">{company.name}</h1>
-          <p className="text-sm text-mab-slate">
-            {[company.domain, company.industry, company.region].filter(Boolean).join(" · ")}
+          <p className="mt-2 text-sm text-mab-slate">
+            {company.industry ?? "Industry pending"} · {company.region ?? "Global"}
           </p>
         </div>
-        <div className="flex gap-3">
-          <button
-            onClick={enrichCompany}
-            className="rounded-xl bg-mab-gold/20 px-5 py-2 text-sm font-medium text-mab-navy transition hover:bg-mab-gold"
-          >
-            Enrich
-          </button>
-          {company.domain && (
-            <button
-              onClick={scrapeEmails}
-              className="rounded-xl bg-mab-navy/5 px-5 py-2 text-sm font-medium text-mab-navy transition hover:bg-mab-navy hover:text-white"
-            >
-              Scrape Emails
-            </button>
-          )}
+        <div className="flex flex-wrap gap-3">
+          <PrimaryButton
+            label="Edit company"
+            href={`/companies/${company.id}/edit`}
+            ariaLabel="Edit company"
+          />
+          <PrimaryButton
+            label="Add contact"
+            variant="outline"
+            href={`/contacts/new?companyId=${company.id}`}
+            ariaLabel="Add contact"
+          />
+          <PrimaryButton
+            label="Create deal"
+            variant="outline"
+            href={`/deals/new?companyId=${company.id}`}
+            ariaLabel="Create deal"
+          />
         </div>
       </header>
 
-      {/* Tags & Enrichment */}
-      <div className="flex flex-wrap gap-2">
-        {company.icpTags.map((t) => (
-          <span key={t} className="rounded-full bg-mab-gold/10 px-3 py-1 text-xs text-mab-navy">{t}</span>
-        ))}
-        {company.riskFlags.map((f) => (
-          <span key={f} className="rounded-full bg-red-50 px-3 py-1 text-xs text-red-700">{f}</span>
-        ))}
-      </div>
-      {Object.keys(enriched).length > 0 && (
-        <div className="rounded-2xl border border-mab-navy/10 bg-white p-4 text-sm text-mab-slate">
-          <p className="mb-1 text-xs font-semibold uppercase text-mab-gold">Enrichment Data</p>
-          {Object.entries(enriched).map(([k, v]) => (
-            <p key={k}><span className="font-medium text-mab-navy">{k}:</span> {String(v)}</p>
-          ))}
-        </div>
-      )}
-
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Contacts */}
-        <div className="rounded-2xl border border-mab-navy/10 bg-white p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-mab-navy">
-              Contacts ({company.contacts.length})
-            </h3>
-            <button
-              onClick={() => setShowContactForm(!showContactForm)}
-              className="text-xs text-mab-gold hover:underline"
-            >
-              + Add
-            </button>
+        <Card title="Account profile" subtitle="ICP and risk intelligence">
+          <div className="space-y-3 text-sm text-mab-slate">
+            <p>
+              <span className="font-medium text-mab-navy">Domain:</span> {company.domain ?? "Not set"}
+            </p>
+            <p>
+              <span className="font-medium text-mab-navy">ICP tags:</span>{" "}
+              {company.icpTags.length ? company.icpTags.join(", ") : "Awaiting signals"}
+            </p>
+            <p>
+              <span className="font-medium text-mab-navy">Risk flags:</span>{" "}
+              {company.riskFlags.length ? company.riskFlags.join(", ") : "None"}
+            </p>
+            <p>
+              <span className="font-medium text-mab-navy">Notes:</span> {company.notesSummary ?? "No summary"}
+            </p>
           </div>
-          {showContactForm && (
-            <div className="mb-3 space-y-2 rounded-xl bg-mab-ivory p-3">
-              <input placeholder="Name *" value={contactForm.name} onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })} className="w-full rounded-lg border border-mab-navy/10 px-3 py-1.5 text-xs focus:border-mab-gold focus:outline-none" />
-              <input placeholder="Email" value={contactForm.email} onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })} className="w-full rounded-lg border border-mab-navy/10 px-3 py-1.5 text-xs focus:border-mab-gold focus:outline-none" />
-              <input placeholder="Title" value={contactForm.title} onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })} className="w-full rounded-lg border border-mab-navy/10 px-3 py-1.5 text-xs focus:border-mab-gold focus:outline-none" />
-              <button onClick={addContact} className="rounded-lg bg-mab-navy px-4 py-1.5 text-xs text-white">Create</button>
-            </div>
+        </Card>
+        <Card title="Active contacts" subtitle="Relationship map">
+          {company.contacts.length ? (
+            <ul className="space-y-3 text-sm">
+              {company.contacts.map((contact) => (
+                <li key={contact.id}>
+                  <Link
+                    href={`/contacts/${contact.id}`}
+                    className="block rounded-2xl border border-mab-gold/20 bg-white px-4 py-3 text-mab-navy shadow-sm transition hover:-translate-y-0.5 hover:bg-mab-navy hover:text-white"
+                  >
+                    <p className="font-medium">{contact.name}</p>
+                    <p className="text-xs text-mab-slate">
+                      {contact.title ?? "Title pending"}
+                    </p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-mab-slate">No contacts yet. Add one to build influence.</p>
           )}
-          <div className="space-y-2">
-            {company.contacts.map((c) => (
-              <a key={c.id} href={`/contacts/${c.id}`} className="block rounded-xl bg-mab-ivory/50 p-2 text-xs hover:bg-mab-ivory">
-                <p className="font-medium text-mab-navy">{c.name}</p>
-                <p className="text-mab-slate">{[c.title, c.email].filter(Boolean).join(" · ")}</p>
-                <div className="mt-1 flex items-center gap-2">
-                  <div className="h-1 flex-1 rounded bg-mab-navy/10">
-                    <div className="h-1 rounded bg-mab-gold" style={{ width: `${c.relationshipStrength}%` }} />
-                  </div>
-                  <span className="text-mab-slate">{c.relationshipStrength}%</span>
-                </div>
-              </a>
-            ))}
+        </Card>
+        <Card title="Open initiatives" subtitle="Deals and tasks">
+          <div className="space-y-4 text-sm text-mab-slate">
+            <p>
+              Deals in motion: <span className="font-semibold text-mab-navy">{company.deals.length}</span>
+            </p>
+            <p>
+              Tasks queued: <span className="font-semibold text-mab-navy">{company.tasks.length}</span>
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <PrimaryButton
+                label="View deals"
+                variant="outline"
+                href="/deals"
+                ariaLabel="View deals"
+              />
+              <PrimaryButton
+                label="View tasks"
+                variant="outline"
+                href="/tasks"
+                ariaLabel="View tasks"
+              />
+            </div>
           </div>
-        </div>
-
-        {/* Deals */}
-        <div className="rounded-2xl border border-mab-navy/10 bg-white p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-mab-navy">Deals ({company.deals.length})</h3>
-            <a href="/deals/new" className="text-xs text-mab-gold hover:underline">+ New</a>
-          </div>
-          <div className="space-y-2">
-            {company.deals.map((d) => (
-              <a key={d.id} href={`/deals/${d.id}`} className="block rounded-xl bg-mab-ivory/50 p-2 text-xs hover:bg-mab-ivory">
-                <div className="flex items-center justify-between">
-                  <p className="font-medium text-mab-navy">{d.title ?? d.offerType}</p>
-                  <span className="text-mab-gold">M{d.momentumScore}</span>
-                </div>
-                <p className="text-mab-slate">{d.stage.replace(/_/g, " ")} · {d.value ? `$${d.value.toLocaleString()}` : "TBD"}</p>
-              </a>
-            ))}
-          </div>
-        </div>
-
-        {/* Activity Feed */}
-        <div className="rounded-2xl border border-mab-navy/10 bg-white p-4">
-          <h3 className="mb-3 text-sm font-semibold text-mab-navy">Recent Activity</h3>
-          <div className="space-y-2">
-            {company.activities.slice(0, 10).map((a) => (
-              <div key={a.id} className="rounded-xl bg-mab-ivory/50 p-2 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-mab-navy">{a.type}</span>
-                  <span className="text-mab-slate">{new Date(a.occurredAt).toLocaleDateString()}</span>
-                </div>
-                {a.outcome && <p className="text-mab-slate">{a.outcome}</p>}
-              </div>
-            ))}
-            {company.activities.length === 0 && (
-              <p className="py-4 text-center text-xs text-mab-slate/50">No activity yet</p>
-            )}
-          </div>
-        </div>
+        </Card>
       </div>
     </div>
   );

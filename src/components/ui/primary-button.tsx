@@ -1,6 +1,7 @@
 "use client";
 
 import clsx from "clsx";
+import type { Route } from "next";
 import Link from "next/link";
 import { useBrandingAssets } from "../use-branding-assets";
 
@@ -47,8 +48,8 @@ export function PrimaryButton({
 
   if (href) {
     return (
-      <Link href={href} className={className} aria-label={ariaLabel ?? label}>
-        {content}
+      <Link href={href as Route} className={className} aria-label={ariaLabel ?? label}>
+        {label}
       </Link>
     );
   }

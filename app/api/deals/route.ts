@@ -2,76 +2,120 @@ import { NextResponse } from "next/server";
 import { prisma } from "../../../src/lib/db";
 import { rateLimit } from "../../../src/lib/rate-limit";
 
-export const dynamic = "force-dynamic";
+const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+
+const dealStages = [
+  "PROSPECT_IDENTIFIED",
+  "ENRICHED",
+  "OUTREACH_SENT",
+  "DISCOVERY_SCHEDULED",
+  "DISCOVERY_COMPLETED",
+  "OFFER_PRESENTED",
+  "PROPOSAL_SENT",
+  "CLOSED_WON",
+  "CLOSED_LOST",
+  "DELIVERY_IN_PROGRESS",
+  "DELIVERY_COMPLETE"
+];
+
+const offerTypes = ["AUDIT", "BLUEPRINT", "LEAD_LIST", "IMPLEMENTATION", "OTHER"];
+
+const parseDate = (value: unknown) => {
+  if (!value) {
+    return null;
+  }
+  const date = new Date(String(value));
+  return Number.isNaN(date.getTime()) ? null : date;
+};
 
 export async function GET(request: Request) {
+  const origin = request.headers.get("origin");
+  const csrfToken = request.headers.get("x-csrf-token");
+  if (origin && origin !== appUrl && !csrfToken) {
+    return NextResponse.json({ error: "CSRF validation failed." }, { status: 403 });
+  }
   const rate = rateLimit("deals", 30, 60000);
   if (!rate.allowed) {
     return NextResponse.json({ error: "Rate limit exceeded." }, { status: 429 });
   }
 
-  const { searchParams } = new URL(request.url);
-  const companyId = searchParams.get("companyId");
-  const stage = searchParams.get("stage");
-  const page = Math.max(1, Number(searchParams.get("page") ?? 1));
-  const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit") ?? 50)));
-  const skip = (page - 1) * limit;
+  const deals = await prisma.deal.findMany({
+    where: { deletedAt: null },
+    orderBy: { createdAt: "desc" },
+    include: { company: true, primaryContact: true }
+  });
 
-  const where = {
-    deletedAt: null,
-    ...(companyId ? { companyId } : {}),
-    ...(stage ? { stage: stage as never } : {})
-  };
-
-  const [deals, total] = await Promise.all([
-    prisma.deal.findMany({
-      where,
-      include: {
-        company: { select: { id: true, name: true } },
-        primaryContact: { select: { id: true, name: true, email: true } },
-        _count: { select: { activities: true, tasks: true, notes: true } }
-      },
-      orderBy: { momentumScore: "desc" },
-      skip,
-      take: limit
-    }),
-    prisma.deal.count({ where })
-  ]);
-
-  return NextResponse.json({ deals, total, page, limit });
+  const response = NextResponse.json({ deals });
+  response.headers.set("Access-Control-Allow-Origin", "*");
+  response.headers.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type");
+  return response;
 }
 
 export async function POST(request: Request) {
+  const origin = request.headers.get("origin");
+  const csrfToken = request.headers.get("x-csrf-token");
+  if (origin && origin !== appUrl && !csrfToken) {
+    return NextResponse.json({ error: "CSRF validation failed." }, { status: 403 });
+  }
   const rate = rateLimit("deals", 20, 60000);
   if (!rate.allowed) {
     return NextResponse.json({ error: "Rate limit exceeded." }, { status: 429 });
   }
-
   const body = await request.json();
-  if (!body.companyId) {
+  if (!body.companyId || typeof body.companyId !== "string") {
     return NextResponse.json({ error: "companyId is required." }, { status: 400 });
+  }
+  if (!body.stage || typeof body.stage !== "string" || !dealStages.includes(body.stage)) {
+    return NextResponse.json({ error: "stage is required." }, { status: 400 });
+  }
+
+  const company = await prisma.company.findFirst({
+    where: { id: body.companyId, deletedAt: null }
+  });
+  if (!company) {
+    return NextResponse.json({ error: "Company not found." }, { status: 400 });
+  }
+
+  if (body.primaryContactId) {
+    const contact = await prisma.contact.findFirst({
+      where: { id: body.primaryContactId, deletedAt: null }
+    });
+    if (!contact) {
+      return NextResponse.json({ error: "Primary contact not found." }, { status: 400 });
+    }
   }
 
   const deal = await prisma.deal.create({
     data: {
       companyId: body.companyId,
-      primaryContactId: body.primaryContactId ?? null,
-      title: body.title ?? null,
-      stage: body.stage ?? "PROSPECT_IDENTIFIED",
-      value: body.value ?? null,
-      probability: body.probability ?? 0,
-      closeDate: body.closeDate ? new Date(body.closeDate) : null,
-      offerType: body.offerType ?? "OTHER",
-      objections: body.objections ?? null,
-      roiDrivers: body.roiDrivers ?? null,
-      nextStepDate: body.nextStepDate ? new Date(body.nextStepDate) : null,
-      momentumScore: body.momentumScore ?? 50
-    },
-    include: {
-      company: { select: { id: true, name: true } },
-      primaryContact: { select: { id: true, name: true } }
+      primaryContactId: typeof body.primaryContactId === "string" ? body.primaryContactId : null,
+      stage: body.stage,
+      value: typeof body.value === "number" ? body.value : null,
+      probability: typeof body.probability === "number" ? body.probability : 0,
+      closeDate: parseDate(body.closeDate),
+      offerType:
+        typeof body.offerType === "string" && offerTypes.includes(body.offerType)
+          ? body.offerType
+          : "OTHER",
+      objections: typeof body.objections === "string" ? body.objections : null,
+      roiDrivers: typeof body.roiDrivers === "string" ? body.roiDrivers : null,
+      nextStepDate: parseDate(body.nextStepDate),
+      momentumScore: typeof body.momentumScore === "number" ? body.momentumScore : 0
     }
   });
 
-  return NextResponse.json({ deal }, { status: 201 });
+  const response = NextResponse.json({ deal }, { status: 201 });
+  response.headers.set("Access-Control-Allow-Origin", "*");
+  response.headers.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type");
+  return response;
+}
+
+export async function OPTIONS() {
+  const response = new NextResponse(null, { status: 204 });
+  response.headers.set("Access-Control-Allow-Origin", "*");
+  response.headers.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type");
+  return response;
 }

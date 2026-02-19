@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect } from "react";
 import Link from "next/link";
+import { useEffect } from "react";
 import { useCommandPalette } from "./use-command-palette";
 
 const actions = [
-  { label: "New Note", href: "/workspace" },
-  { label: "New Deal", href: "/workspace" },
-  { label: "Attach Asset", href: "/assets" },
-  { label: "Generate Proposal", href: "/assets" },
+  { label: "New Company", href: "/companies/new" },
+  { label: "New Contact", href: "/contacts/new" },
+  { label: "New Deal", href: "/deals/new" },
+  { label: "New Task", href: "/tasks/new" },
+  { label: "Attach Asset", href: "/assets/upload" },
+  { label: "Generate Proposal", href: "/assets/generate" },
   { label: "Search Memory", href: "/search" }
-];
+] as const;
 
 export function CommandPalette() {
   const { isOpen, close, open } = useCommandPalette();
@@ -47,17 +49,17 @@ export function CommandPalette() {
             ESC
           </button>
         </div>
-        <p className="mt-2 text-sm text-mab-slate">Jump to actions, instantly.</p>
+        <p className="mt-2 text-sm text-mab-slate">Jump to high-impact actions, instantly.</p>
         <div className="mt-4 grid gap-3">
           {actions.map((action) => (
             <Link
               key={action.label}
               href={action.href}
-              className="flex items-center justify-between rounded-xl border border-mab-gold/20 px-4 py-3 text-sm text-mab-navy transition hover:-translate-y-0.5 hover:border-mab-gold hover:shadow-glow"
+              className="group flex items-center justify-between rounded-xl border border-mab-gold/20 px-4 py-3 text-sm text-mab-navy transition hover:-translate-y-0.5 hover:border-mab-gold hover:shadow-glow"
               onClick={close}
             >
-              {action.label}
-              <span className="text-xs text-mab-slate">Enter ↵</span>
+              <span>{action.label}</span>
+              <span className="text-xs text-mab-slate transition group-hover:text-mab-navy">Enter ↵</span>
             </Link>
           ))}
         </div>

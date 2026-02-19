@@ -10,10 +10,14 @@ const navItems = [
   { href: "/contacts", label: "Contacts" },
   { href: "/outreach", label: "Outreach" },
   { href: "/workspace", label: "Workspace" },
+  { href: "/companies", label: "Companies" },
+  { href: "/contacts", label: "Contacts" },
+  { href: "/deals", label: "Deals" },
+  { href: "/tasks", label: "Tasks" },
   { href: "/assets", label: "Assets" },
   { href: "/search", label: "Search" },
   { href: "/finish-line", label: "Finish Line" }
-];
+ ] as const;
 
 export function Sidebar() {
   const { assets } = useBrandingAssets();

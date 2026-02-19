@@ -1,130 +1,106 @@
-"use client";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { prisma } from "../../../../src/lib/db";
+import { Card } from "../../../../src/components/ui/card";
+import { PrimaryButton } from "../../../../src/components/ui/primary-button";
 
-import { useEffect, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
+export default async function ContactDetailPage({ params }: { params: { id: string } }) {
+  const contact = await prisma.contact.findFirst({
+    where: { id: params.id, deletedAt: null },
+    include: { company: true, deals: { where: { deletedAt: null } }, tasks: { where: { deletedAt: null } } }
+  });
 
-type ContactDetail = {
-  id: string;
-  name: string;
-  title: string | null;
-  email: string | null;
-  phone: string | null;
-  linkedinUrl: string | null;
-  relationshipStrength: number;
-  source: string | null;
-  company: { id: string; name: string; domain: string | null };
-  deals: { id: string; title: string | null; stage: string; offerType: string }[];
-  activities: { id: string; type: string; occurredAt: string; outcome: string | null }[];
-  outreachLogs: { id: string; subject: string; status: string; sentAt: string | null; createdAt: string }[];
-};
-
-export default function ContactDetailPage() {
-  const params = useParams();
-  const id = params.id as string;
-  const [contact, setContact] = useState<ContactDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchContact = useCallback(async () => {
-    const res = await fetch(`/api/contacts/${id}`);
-    if (res.ok) {
-      const data = await res.json();
-      setContact(data.contact);
-    }
-    setLoading(false);
-  }, [id]);
-
-  useEffect(() => {
-    fetchContact();
-  }, [fetchContact]);
-
-  const sendOutreach = async () => {
-    if (!contact) return;
-    await fetch("/api/outreach", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contactId: contact.id, sequenceStep: 1 })
-    });
-    fetchContact();
-  };
-
-  if (loading) return <div className="py-20 text-center text-mab-slate">Loading...</div>;
-  if (!contact) return <div className="py-20 text-center text-mab-slate">Contact not found.</div>;
+  if (!contact) {
+    notFound();
+  }
 
   return (
-    <div className="space-y-6">
-      <header>
-        <a href="/contacts" className="text-xs text-mab-gold hover:underline">← Contacts</a>
-        <h1 className="text-3xl font-semibold text-mab-navy">{contact.name}</h1>
-        <p className="text-sm text-mab-slate">
-          {[contact.title, contact.email, contact.phone].filter(Boolean).join(" · ")}
-        </p>
-        <p className="text-sm text-mab-slate">
-          Company: <a href={`/companies/${contact.company.id}`} className="text-mab-gold hover:underline">{contact.company.name}</a>
-        </p>
+    <div className="space-y-8">
+      <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="text-sm uppercase tracking-[0.35em] text-mab-gold">Contact dossier</p>
+          <h1 className="text-3xl font-semibold text-mab-navy">{contact.name}</h1>
+          <p className="mt-2 text-sm text-mab-slate">
+            {contact.title ?? "Title pending"} · {contact.company?.name ?? "No company"}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <PrimaryButton
+            label="Edit contact"
+            href={`/contacts/${contact.id}/edit`}
+            ariaLabel="Edit contact"
+          />
+          <PrimaryButton
+            label="Log task"
+            variant="outline"
+            href={`/tasks/new?companyId=${contact.companyId}&contactId=${contact.id}`}
+            ariaLabel="Log task"
+          />
+          <PrimaryButton
+            label="Create deal"
+            variant="outline"
+            href={`/deals/new?companyId=${contact.companyId}&primaryContactId=${contact.id}`}
+            ariaLabel="Create deal"
+          />
+        </div>
       </header>
 
-      <div className="flex gap-3">
-        <button
-          onClick={sendOutreach}
-          className="rounded-xl bg-mab-navy px-5 py-2 text-sm font-medium text-white transition hover:bg-mab-gold hover:text-mab-navy"
-        >
-          Compose Outreach
-        </button>
-      </div>
-
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Deals */}
-        <div className="rounded-2xl border border-mab-navy/10 bg-white p-4">
-          <h3 className="mb-3 text-sm font-semibold text-mab-navy">Deals</h3>
-          {contact.deals.length === 0 ? (
-            <p className="text-xs text-mab-slate">No deals linked</p>
-          ) : (
-            <div className="space-y-2">
-              {contact.deals.map((d) => (
-                <a key={d.id} href={`/deals/${d.id}`} className="block rounded-xl bg-mab-ivory/50 p-2 text-xs hover:bg-mab-ivory">
-                  <p className="font-medium text-mab-navy">{d.title ?? d.offerType}</p>
-                  <p className="text-mab-slate">{d.stage.replace(/_/g, " ")}</p>
-                </a>
+        <Card title="Connection data" subtitle="Relationship intelligence">
+          <div className="space-y-3 text-sm text-mab-slate">
+            <p>
+              <span className="font-medium text-mab-navy">Email:</span> {contact.email ?? "Not set"}
+            </p>
+            <p>
+              <span className="font-medium text-mab-navy">Phone:</span> {contact.phone ?? "Not set"}
+            </p>
+            <p>
+              <span className="font-medium text-mab-navy">LinkedIn:</span>{" "}
+              {contact.linkedinUrl ?? "Not set"}
+            </p>
+            <p>
+              <span className="font-medium text-mab-navy">Relationship strength:</span> {contact.relationshipStrength}
+            </p>
+          </div>
+        </Card>
+        <Card title="Associated deals" subtitle="Pipeline touchpoints">
+          {contact.deals.length ? (
+            <ul className="space-y-3 text-sm">
+              {contact.deals.map((deal) => (
+                <li key={deal.id}>
+                  <Link
+                    href={`/deals/${deal.id}`}
+                    className="block rounded-2xl border border-mab-gold/20 bg-white px-4 py-3 text-mab-navy shadow-sm transition hover:-translate-y-0.5 hover:bg-mab-navy hover:text-white"
+                  >
+                    <p className="font-medium">{deal.stage.replace(/_/g, " ")}</p>
+                    <p className="text-xs text-mab-slate">Momentum {deal.momentumScore}</p>
+                  </Link>
+                </li>
               ))}
-            </div>
+            </ul>
+          ) : (
+            <p className="text-sm text-mab-slate">No deals yet. Add a pipeline opportunity.</p>
           )}
-        </div>
-
-        {/* Activities */}
-        <div className="rounded-2xl border border-mab-navy/10 bg-white p-4">
-          <h3 className="mb-3 text-sm font-semibold text-mab-navy">Activities</h3>
-          <div className="space-y-2">
-            {contact.activities.map((a) => (
-              <div key={a.id} className="rounded-xl bg-mab-ivory/50 p-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="font-medium text-mab-navy">{a.type}</span>
-                  <span className="text-mab-slate">{new Date(a.occurredAt).toLocaleDateString()}</span>
-                </div>
-                {a.outcome && <p className="text-mab-slate">{a.outcome}</p>}
-              </div>
-            ))}
-            {contact.activities.length === 0 && <p className="text-xs text-mab-slate">No activity</p>}
-          </div>
-        </div>
-
-        {/* Outreach */}
-        <div className="rounded-2xl border border-mab-navy/10 bg-white p-4">
-          <h3 className="mb-3 text-sm font-semibold text-mab-navy">Outreach</h3>
-          <div className="space-y-2">
-            {contact.outreachLogs.map((o) => (
-              <div key={o.id} className="rounded-xl bg-mab-ivory/50 p-2 text-xs">
-                <p className="font-medium text-mab-navy">{o.subject}</p>
-                <div className="flex justify-between">
-                  <span className={`rounded px-1 ${o.status === "SENT" ? "bg-green-100 text-green-700" : o.status === "DRAFT" ? "bg-gray-100" : "bg-yellow-100"}`}>
-                    {o.status}
-                  </span>
-                  <span className="text-mab-slate">{new Date(o.createdAt).toLocaleDateString()}</span>
-                </div>
-              </div>
-            ))}
-            {contact.outreachLogs.length === 0 && <p className="text-xs text-mab-slate">No outreach yet</p>}
-          </div>
-        </div>
+        </Card>
+        <Card title="Open tasks" subtitle="Momentum builders">
+          {contact.tasks.length ? (
+            <ul className="space-y-3 text-sm">
+              {contact.tasks.map((task) => (
+                <li key={task.id}>
+                  <Link
+                    href={`/tasks/${task.id}`}
+                    className="block rounded-2xl border border-mab-gold/20 bg-white px-4 py-3 text-mab-navy shadow-sm transition hover:-translate-y-0.5 hover:bg-mab-navy hover:text-white"
+                  >
+                    <p className="font-medium">{task.title}</p>
+                    <p className="text-xs text-mab-slate">Status: {task.status}</p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-mab-slate">No tasks assigned yet.</p>
+          )}
+        </Card>
       </div>
     </div>
   );
