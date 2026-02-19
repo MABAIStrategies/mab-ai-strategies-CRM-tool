@@ -1,5 +1,6 @@
 import { Card } from "../../../../src/components/ui/card";
 import { PrimaryButton } from "../../../../src/components/ui/primary-button";
+import { AssetUploadForm } from "../../../../src/components/asset-upload-form";
 
 export default function UploadAssetPage() {
   return (
@@ -25,27 +26,7 @@ export default function UploadAssetPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Asset Details" subtitle="Ensure versioned control">
-          <form className="space-y-4 text-sm text-mab-slate">
-            <label className="block text-xs uppercase tracking-[0.3em] text-mab-gold">Asset Title</label>
-            <input
-              type="text"
-              placeholder="Compliance Automation One-Pager"
-              className="w-full rounded-xl border border-mab-navy/10 bg-white px-4 py-3 text-sm text-mab-ink shadow-sm focus:border-mab-gold focus:outline-none"
-            />
-            <label className="block text-xs uppercase tracking-[0.3em] text-mab-gold">Version</label>
-            <input
-              type="text"
-              placeholder="v2.1"
-              className="w-full rounded-xl border border-mab-navy/10 bg-white px-4 py-3 text-sm text-mab-ink shadow-sm focus:border-mab-gold focus:outline-none"
-            />
-            <label className="block text-xs uppercase tracking-[0.3em] text-mab-gold">Asset Tags</label>
-            <input
-              type="text"
-              placeholder="Compliance, ROI, Executive"
-              className="w-full rounded-xl border border-mab-navy/10 bg-white px-4 py-3 text-sm text-mab-ink shadow-sm focus:border-mab-gold focus:outline-none"
-            />
-            <PrimaryButton label="Upload asset" ariaLabel="Upload asset" />
-          </form>
+          <AssetUploadForm />
         </Card>
 
         <Card title="Distribution Plan" subtitle="Where should it show up?">

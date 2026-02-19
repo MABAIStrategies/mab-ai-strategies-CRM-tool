@@ -138,44 +138,22 @@ async function handleTemplateGenerate(payload: Record<string, unknown>) {
   if (!template) {
     throw new Error(`Template ${templateId} not found`);
   }
-
-  const resolvedType =
-    template.outputType === "PROPOSAL"
-      ? "PROPOSAL"
-      : template.outputType === "DOC"
-        ? "TEMPLATE"
-        : template.outputType === "EMAIL"
-          ? "SCRIPT"
-          : "OTHER";
-
-  if (assetId) {
-    const existingAsset = await prisma.asset.findUnique({ where: { id: assetId } });
-    if (existingAsset) {
-      await prisma.asset.update({
-        where: { id: assetId },
-        data: {
-          type: resolvedType,
-          title: `${template.name} Output`,
-          description: template.description ?? "Generated draft ready for review.",
-          tags: ["Generated", "Template"],
-          version: "1.0",
-          status: "DRAFT",
-          storageUri: `local://generated/${template.id}`
-        }
-      });
-      return;
-    }
-  }
-
+  const outputToAssetType: Record<string, string> = {
+    EMAIL: "SCRIPT",
+    DOC: "ONE_PAGER",
+    PROPOSAL: "PROPOSAL",
+    OTHER: "OTHER"
+  };
+  const assetType = outputToAssetType[template.outputType] ?? "OTHER";
   await prisma.asset.create({
     data: {
-      type: resolvedType,
+      type: assetType,
       title: `${template.name} Output`,
-      description: template.description ?? "Generated draft ready for review.",
-      tags: ["Generated", "Template"],
+      description: template.description ?? null,
+      tags: ["Generated", template.outputType],
       version: "1.0",
       status: "DRAFT",
-      storageUri: `local://generated/${template.id}`
+      storageUri: `local://generated/${templateId}`
     }
   });
 }
