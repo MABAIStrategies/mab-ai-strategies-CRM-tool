@@ -3,339 +3,341 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
 }
 
 enum DealStage {
-  PROSPECT_IDENTIFIED
-  ENRICHED
-  OUTREACH_SENT
-  DISCOVERY_SCHEDULED
-  DISCOVERY_COMPLETED
-  OFFER_PRESENTED
-  PROPOSAL_SENT
-  CLOSED_WON
-  CLOSED_LOST
-  DELIVERY_IN_PROGRESS
-  DELIVERY_COMPLETE
+  PROSPECTING
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
 }
 
-enum DealOfferType {
-  AUDIT
-  BLUEPRINT
-  LEAD_LIST
-  IMPLEMENTATION
-  OTHER
+enum DealStatus {
+  OPEN
+  WON
+  LOST
+  STALLED
 }
 
 enum ActivityType {
   CALL
-  MEETING
   EMAIL
-  LINKEDIN
-  OTHER
+  MEETING
+  DEMO
+  NOTE
 }
 
 enum TaskStatus {
   TODO
-  DOING
-  DONE
+  IN_PROGRESS
+  BLOCKED
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
 }
 
 enum AssetType {
-  SCRIPT
-  ONE_PAGER
-  PROPOSAL
-  TEMPLATE
-  CALCULATOR
-  DECK
+  DOCUMENT
+  PRESENTATION
+  SPREADSHEET
+  IMAGE
+  VIDEO
+  LINK
   OTHER
 }
 
-enum AssetStatus {
-  DRAFT
-  APPROVED
-}
-
-enum TemplateOutputType {
+enum TemplateType {
   EMAIL
-  DOC
   PROPOSAL
+  FOLLOW_UP
+  SEQUENCE
   OTHER
 }
 
 enum MemorySourceType {
-  NOTE
-  ACTIVITY
-  ASSET
+  CALL_SUMMARY
   EMAIL
-  DOC_LINK
+  MEETING
+  NOTE
+  TASK
+  IMPORT
+  OTHER
+}
+
+enum JobType {
+  SUMMARIZE
+  EXTRACT
+  EMBED
+  DRAFT
+  NOTIFY
   OTHER
 }
 
 enum JobStatus {
-  QUEUED
+  PENDING
   RUNNING
   SUCCEEDED
   FAILED
-}
-
-enum OutreachStatus {
-  DRAFT
-  QUEUED
-  SENT
-  DELIVERED
-  OPENED
-  CLICKED
-  REPLIED
-  BOUNCED
-  FAILED
+  CANCELLED
 }
 
 model Company {
-  id           String    @id @default(uuid())
+  id           String       @id @default(uuid()) @db.Uuid
   name         String
-  domain       String?
+  website      String?
   industry     String?
-  region       String?
-  icpTags      String[]
-  riskFlags    String[]
-  notesSummary String?
-  enrichedData Json?
-  createdBy    String?
-  updatedBy    String?
-  deletedAt    DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  size         Int?
+  description  String?
+  phone        String?
+  email        String?
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  state        String?
+  postalCode   String?
+  country      String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
   contacts     Contact[]
   deals        Deal[]
   activities   Activity[]
   notes        Note[]
   tasks        Task[]
+  assets       Asset[]
+  templates    Template[]
   memoryItems  MemoryItem[]
-  outreachLogs OutreachLog[]
-
-  @@index([deletedAt])
+  jobs         Job[]
 }
 
 model Contact {
-  id                   String   @id @default(uuid())
-  companyId            String
-  name                 String
-  title                String?
-  email                String?
-  phone                String?
-  linkedinUrl          String?
-  relationshipStrength Int      @default(50)
-  source               String?
-  createdBy            String?
-  updatedBy            String?
-  deletedAt            DateTime?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-  company              Company  @relation(fields: [companyId], references: [id])
-  deals                Deal[]
-  notes                Note[]
-  activities           Activity[]
-  tasks                Task[]
-  memoryItems          MemoryItem[]
-  outreachLogs         OutreachLog[]
+  id          String       @id @default(uuid()) @db.Uuid
+  companyId   String?      @db.Uuid
+  firstName   String
+  lastName    String
+  email       String?
+  phone       String?
+  title       String?
+  linkedinUrl String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
-  @@index([deletedAt])
+  company     Company?     @relation(fields: [companyId], references: [id])
+  deals       Deal[]
+  activities  Activity[]
+  notes       Note[]
+  tasks       Task[]
+  memoryItems MemoryItem[]
+
+  @@index([companyId])
   @@index([email])
+  @@index([lastName, firstName])
 }
 
 model Deal {
-  id               String        @id @default(uuid())
-  companyId        String
-  primaryContactId String?
-  title            String?
-  stage            DealStage
-  value            Float?
-  probability      Int           @default(0)
-  closeDate        DateTime?
-  offerType        DealOfferType @default(OTHER)
-  objections       String?
-  roiDrivers       String?
-  nextStepDate     DateTime?
-  momentumScore    Int           @default(0)
-  createdBy        String?
-  updatedBy        String?
-  deletedAt        DateTime?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  company          Company       @relation(fields: [companyId], references: [id])
-  primaryContact   Contact?      @relation(fields: [primaryContactId], references: [id])
-  activities       Activity[]
-  notes            Note[]
-  tasks            Task[]
-  memoryItems      MemoryItem[]
+  id                String       @id @default(uuid()) @db.Uuid
+  companyId         String?      @db.Uuid
+  contactId         String?      @db.Uuid
+  name              String
+  description       String?
+  value             Decimal?     @db.Decimal(12, 2)
+  currency          String       @default("USD")
+  stage             DealStage    @default(PROSPECTING)
+  status            DealStatus   @default(OPEN)
+  expectedCloseDate DateTime?
+  closedAt          DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
-  @@index([deletedAt])
+  company           Company?     @relation(fields: [companyId], references: [id])
+  primaryContact    Contact?     @relation(fields: [contactId], references: [id])
+  activities        Activity[]
+  notes             Note[]
+  tasks             Task[]
+  memoryItems       MemoryItem[]
+
+  @@index([companyId])
+  @@index([contactId])
   @@index([stage])
+  @@index([status])
 }
 
 model Activity {
-  id              String       @id @default(uuid())
-  companyId       String
-  dealId          String?
-  contactId       String?
-  type            ActivityType
-  occurredAt      DateTime
-  durationMinutes Int?
-  outcome         String?
-  createdBy       String?
-  updatedBy       String?
-  deletedAt       DateTime?
-  createdAt       DateTime     @default(now())
-  company         Company      @relation(fields: [companyId], references: [id])
-  deal            Deal?        @relation(fields: [dealId], references: [id])
-  contact         Contact?     @relation(fields: [contactId], references: [id])
+  id          String       @id @default(uuid()) @db.Uuid
+  companyId   String?      @db.Uuid
+  contactId   String?      @db.Uuid
+  dealId      String?      @db.Uuid
+  type        ActivityType
+  title       String
+  description String?
+  occurredAt  DateTime     @default(now())
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
-  @@index([deletedAt])
+  company     Company?     @relation(fields: [companyId], references: [id])
+  contact     Contact?     @relation(fields: [contactId], references: [id])
+  deal        Deal?        @relation(fields: [dealId], references: [id])
+  notes       Note[]
+  memoryItems MemoryItem[]
+
+  @@index([companyId])
+  @@index([contactId])
+  @@index([dealId])
+  @@index([occurredAt])
 }
 
 model Note {
-  id                String   @id @default(uuid())
-  companyId         String
-  dealId            String?
-  contactId         String?
-  rawText           String
-  searchText        String?
-  structuredExtract Json?
-  summary           String?
-  tags              String[]
-  createdBy         String?
-  updatedBy         String?
-  deletedAt         DateTime?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  company           Company  @relation(fields: [companyId], references: [id])
-  deal              Deal?    @relation(fields: [dealId], references: [id])
-  contact           Contact? @relation(fields: [contactId], references: [id])
+  id         String    @id @default(uuid()) @db.Uuid
+  companyId  String?   @db.Uuid
+  contactId  String?   @db.Uuid
+  dealId     String?   @db.Uuid
+  activityId String?   @db.Uuid
+  title      String?
+  body       String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
-  @@index([searchText])
-  @@index([deletedAt])
+  company    Company?  @relation(fields: [companyId], references: [id])
+  contact    Contact?  @relation(fields: [contactId], references: [id])
+  deal       Deal?     @relation(fields: [dealId], references: [id])
+  activity   Activity? @relation(fields: [activityId], references: [id])
+  memoryItems MemoryItem[]
+
+  @@index([companyId])
+  @@index([contactId])
+  @@index([dealId])
+  @@index([activityId])
 }
 
 model Task {
-  id          String     @id @default(uuid())
-  companyId   String?
-  dealId      String?
-  contactId   String?
+  id          String       @id @default(uuid()) @db.Uuid
+  companyId   String?      @db.Uuid
+  contactId   String?      @db.Uuid
+  dealId      String?      @db.Uuid
+  activityId  String?      @db.Uuid
   title       String
   description String?
-  dueAt       DateTime?
-  status      TaskStatus @default(TODO)
-  createdBy   String?
-  updatedBy   String?
-  deletedAt   DateTime?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  company     Company?   @relation(fields: [companyId], references: [id])
-  deal        Deal?      @relation(fields: [dealId], references: [id])
-  contact     Contact?   @relation(fields: [contactId], references: [id])
+  status      TaskStatus   @default(TODO)
+  priority    TaskPriority @default(MEDIUM)
+  dueDate     DateTime?
+  completedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
-  @@index([deletedAt])
+  company     Company?     @relation(fields: [companyId], references: [id])
+  contact     Contact?     @relation(fields: [contactId], references: [id])
+  deal        Deal?        @relation(fields: [dealId], references: [id])
+  activity    Activity?    @relation(fields: [activityId], references: [id])
+  memoryItems MemoryItem[]
+
+  @@index([companyId])
+  @@index([contactId])
+  @@index([dealId])
+  @@index([activityId])
   @@index([status])
 }
 
 model Asset {
-  id          String      @id @default(uuid())
-  type        AssetType
-  title       String
+  id          String    @id @default(uuid()) @db.Uuid
+  companyId   String?   @db.Uuid
+  name        String
+  type        AssetType @default(DOCUMENT)
   description String?
-  tags        String[]
-  version     String
-  status      AssetStatus @default(DRAFT)
-  storageUri  String
-  createdBy   String?
-  updatedBy   String?
-  deletedAt   DateTime?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  url         String
+  mimeType    String?
+  sizeBytes   Int?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  @@index([deletedAt])
+  company     Company?  @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
+  @@index([type])
 }
 
 model Template {
-  id              String             @id @default(uuid())
-  name            String
-  description     String?
-  variablesSchema Json
-  prompt          String
-  outputType      TemplateOutputType
-  createdBy       String?
-  updatedBy       String?
-  deletedAt       DateTime?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  id          String       @id @default(uuid()) @db.Uuid
+  companyId   String?      @db.Uuid
+  name        String
+  type        TemplateType @default(EMAIL)
+  subject     String?
+  body        String
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
-  @@index([deletedAt])
+  company     Company?     @relation(fields: [companyId], references: [id])
+  memoryItems MemoryItem[]
+
+  @@index([companyId])
+  @@index([type])
 }
 
 model MemoryItem {
-  id             String           @id @default(uuid())
-  sourceType     MemorySourceType
-  sourceId       String
-  companyId      String?
-  dealId         String?
-  contactId      String?
-  extractedFacts Json
-  embedding      Bytes?
-  searchText     String?
-  createdBy      String?
-  updatedBy      String?
-  deletedAt      DateTime?
-  createdAt      DateTime         @default(now())
-  company        Company?         @relation(fields: [companyId], references: [id])
-  deal           Deal?            @relation(fields: [dealId], references: [id])
-  contact        Contact?         @relation(fields: [contactId], references: [id])
+  id          String           @id @default(uuid()) @db.Uuid
+  companyId   String?          @db.Uuid
+  contactId   String?          @db.Uuid
+  dealId      String?          @db.Uuid
+  activityId  String?          @db.Uuid
+  taskId      String?          @db.Uuid
+  noteId      String?          @db.Uuid
+  templateId  String?          @db.Uuid
+  title       String?
+  content     String
+  sourceType  MemorySourceType @default(OTHER)
+  sourceId    String?
+  embedding   Unsupported("vector")?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
-  @@index([searchText])
-  @@index([deletedAt])
+  company     Company?         @relation(fields: [companyId], references: [id])
+  contact     Contact?         @relation(fields: [contactId], references: [id])
+  deal        Deal?            @relation(fields: [dealId], references: [id])
+  activity    Activity?        @relation(fields: [activityId], references: [id])
+  task        Task?            @relation(fields: [taskId], references: [id])
+  note        Note?            @relation(fields: [noteId], references: [id])
+  template    Template?        @relation(fields: [templateId], references: [id])
+
+  @@index([companyId])
+  @@index([contactId])
+  @@index([dealId])
+  @@index([activityId])
+  @@index([taskId])
+  @@index([noteId])
+  @@index([templateId])
 }
 
 model Job {
-  id             String    @id @default(uuid())
-  type           String
-  payload        Json
-  status         JobStatus @default(QUEUED)
-  attempts       Int       @default(0)
-  lastError      String?
-  idempotencyKey String    @unique
-  runAt          DateTime  @default(now())
-  createdBy      String?
-  updatedBy      String?
-  deletedAt      DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id          String     @id @default(uuid()) @db.Uuid
+  companyId   String?    @db.Uuid
+  type        JobType
+  status      JobStatus  @default(PENDING)
+  payload     Json
+  result      Json?
+  errorMessage String?
+  attempts    Int        @default(0)
+  maxAttempts Int        @default(3)
+  runAt       DateTime   @default(now())
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
-  @@index([deletedAt])
-}
+  company     Company?   @relation(fields: [companyId], references: [id])
 
-model OutreachLog {
-  id           String         @id @default(uuid())
-  companyId    String?
-  contactId    String?
-  toEmail      String
-  fromEmail    String?
-  subject      String
-  body         String
-  status       OutreachStatus @default(DRAFT)
-  sentAt       DateTime?
-  openedAt     DateTime?
-  errorMsg     String?
-  sequenceStep Int            @default(1)
-  createdBy    String?
-  deletedAt    DateTime?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  company      Company?       @relation(fields: [companyId], references: [id])
-  contact      Contact?       @relation(fields: [contactId], references: [id])
-
-  @@index([deletedAt])
+  @@index([companyId])
   @@index([status])
-  @@index([contactId])
+  @@index([type])
+  @@index([runAt])
 }
