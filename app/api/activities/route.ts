@@ -1,61 +1,94 @@
+import { ActivityType } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "../../../src/lib/db";
 import { rateLimit } from "../../../src/lib/rate-limit";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request: Request) {
-  const rate = rateLimit("activities", 30, 60000);
+  const origin = request.headers.get("origin");
+  const csrfToken = request.headers.get("x-csrf-token");
+  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+  if (origin && origin !== appUrl && !csrfToken) {
+    return NextResponse.json({ error: "CSRF validation failed." }, { status: 403 });
+  }
+  const rate = rateLimit("activities", 40, 60000);
   if (!rate.allowed) {
     return NextResponse.json({ error: "Rate limit exceeded." }, { status: 429 });
   }
 
   const { searchParams } = new URL(request.url);
-  const companyId = searchParams.get("companyId");
-  const dealId = searchParams.get("dealId");
-  const contactId = searchParams.get("contactId");
-  const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") ?? 30)));
-
-  const where = {
-    deletedAt: null,
-    ...(companyId ? { companyId } : {}),
-    ...(dealId ? { dealId } : {}),
-    ...(contactId ? { contactId } : {})
-  };
+  const companyId = searchParams.get("companyId") ?? undefined;
+  const dealId = searchParams.get("dealId") ?? undefined;
 
   const activities = await prisma.activity.findMany({
-    where,
+    where: {
+      deletedAt: null,
+      ...(companyId ? { companyId } : {}),
+      ...(dealId ? { dealId } : {})
+    },
     include: {
-      company: { select: { id: true, name: true } },
-      contact: { select: { id: true, name: true } },
-      deal: { select: { id: true, title: true, stage: true } }
+      contact: true
     },
     orderBy: { occurredAt: "desc" },
-    take: limit
+    take: 12
   });
 
-  return NextResponse.json({ activities });
+  const response = NextResponse.json({ activities });
+  response.headers.set("Access-Control-Allow-Origin", "*");
+  response.headers.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type");
+  return response;
 }
 
 export async function POST(request: Request) {
+  const origin = request.headers.get("origin");
+  const csrfToken = request.headers.get("x-csrf-token");
+  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+  if (origin && origin !== appUrl && !csrfToken) {
+    return NextResponse.json({ error: "CSRF validation failed." }, { status: 403 });
+  }
+  const rate = rateLimit("activities", 20, 60000);
+  if (!rate.allowed) {
+    return NextResponse.json({ error: "Rate limit exceeded." }, { status: 429 });
+  }
+
   const body = await request.json();
-  const payload = Array.isArray(body.activities) ? body.activities : [body];
+  if (!body.companyId || typeof body.companyId !== "string") {
+    return NextResponse.json({ error: "companyId is required." }, { status: 400 });
+  }
 
-  const activities = await prisma.$transaction(
-    payload.map((activity) =>
-      prisma.activity.create({
-        data: {
-          companyId: activity.companyId ?? "demo-company",
-          dealId: activity.dealId ?? null,
-          contactId: activity.contactId ?? null,
-          type: activity.type,
-          occurredAt: new Date(activity.occurredAt),
-          durationMinutes: activity.durationMinutes,
-          outcome: activity.outcome
-        }
-      })
-    )
-  );
+  const type = body.type ?? ActivityType.OTHER;
+  if (!Object.values(ActivityType).includes(type)) {
+    return NextResponse.json({ error: "Invalid activity type." }, { status: 400 });
+  }
 
-  return NextResponse.json({ activities });
+  const occurredAt = body.occurredAt ? new Date(body.occurredAt) : new Date();
+
+  const activity = await prisma.activity.create({
+    data: {
+      companyId: body.companyId,
+      dealId: body.dealId ?? null,
+      contactId: body.contactId ?? null,
+      type,
+      occurredAt,
+      durationMinutes: body.durationMinutes ?? null,
+      outcome: body.outcome ?? null
+    },
+    include: {
+      contact: true
+    }
+  });
+
+  const response = NextResponse.json({ activity });
+  response.headers.set("Access-Control-Allow-Origin", "*");
+  response.headers.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type");
+  return response;
+}
+
+export async function OPTIONS() {
+  const response = new NextResponse(null, { status: 204 });
+  response.headers.set("Access-Control-Allow-Origin", "*");
+  response.headers.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type");
+  return response;
 }

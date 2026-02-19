@@ -1,93 +1,52 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Card } from "../../../src/components/ui/card";
+import { PrimaryButton } from "../../../src/components/ui/primary-button";
 
-type DashboardStats = {
-  companies: number;
-  contacts: number;
-  deals: number;
-  openDeals: number;
-  wonDeals: number;
-  lostDeals: number;
-  tasksOpen: number;
-  tasksDone: number;
-  activitiesThisWeek: number;
-  outreachSent: number;
-  pipelineValue: number;
+type TodayPayload = {
+  priorityTasks: string[];
+  nextCalls: string[];
+  topDeals: string[];
 };
 
-type TopDeal = {
-  id: string;
-  title: string | null;
-  stage: string;
-  momentumScore: number;
-  value: number | null;
-  offerType: string;
-  company: { name: string };
-  primaryContact: { name: string } | null;
-};
-
-type UpcomingTask = {
-  id: string;
-  title: string;
-  status: string;
-  dueAt: string | null;
-  company: { name: string } | null;
-  deal: { title: string | null } | null;
-};
-
-type RecentActivity = {
-  id: string;
-  type: string;
-  occurredAt: string;
-  outcome: string | null;
-  company: { name: string };
-  contact: { name: string } | null;
+const emptyPayload: TodayPayload = {
+  priorityTasks: [],
+  nextCalls: [],
+  topDeals: []
 };
 
 export default function TodayPage() {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [topDeals, setTopDeals] = useState<TopDeal[]>([]);
-  const [tasks, setTasks] = useState<UpcomingTask[]>([]);
-  const [activities, setActivities] = useState<RecentActivity[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [aiInsight, setAiInsight] = useState<string | null>(null);
+  const [payload, setPayload] = useState<TodayPayload>(emptyPayload);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
-    fetch("/api/dashboard")
-      .then((r) => r.json())
-      .then((data) => {
-        setStats(data.stats);
-        setTopDeals(data.topDeals ?? []);
-        setTasks(data.upcomingTasks ?? []);
-        setActivities(data.recentActivities ?? []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    let mounted = true;
+    const load = async () => {
+      try {
+        const response = await fetch("/api/today", {
+          headers: { "x-csrf-token": "local-dev" }
+        });
+        if (!response.ok) {
+          throw new Error("Unable to load today data.");
+        }
+        const data = (await response.json()) as TodayPayload;
+        if (mounted) {
+          setPayload(data);
+          setStatus("ready");
+        }
+      } catch (error) {
+        if (mounted) {
+          console.error(error);
+          setStatus("error");
+        }
+      }
+    };
+    load();
+    return () => {
+      mounted = false;
+    };
   }, []);
-
-  const getInsight = async () => {
-    const res = await fetch("/api/ai/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messages: [
-          {
-            role: "user",
-            content: `I have ${stats?.openDeals ?? 0} open deals worth $${stats?.pipelineValue?.toLocaleString() ?? 0}, ${stats?.tasksOpen ?? 0} open tasks, and ${stats?.activitiesThisWeek ?? 0} activities this week. What should I focus on today?`
-          }
-        ]
-      })
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setAiInsight(data.response);
-    }
-  };
-
-  if (loading) {
-    return <div className="py-20 text-center text-mab-slate">Loading dashboard...</div>;
-  }
 
   return (
     <div className="space-y-8">
@@ -115,25 +74,46 @@ export default function TodayPage() {
         </div>
       </header>
 
-      {aiInsight && (
-        <div className="rounded-2xl border border-mab-gold/30 bg-mab-navy p-5 text-sm text-white shadow-glow">
-          <p className="mb-1 text-xs uppercase tracking-[0.3em] text-mab-gold">AI Daily Brief</p>
-          <pre className="whitespace-pre-wrap text-white/90">{aiInsight}</pre>
-        </div>
-      )}
-
-      <div className="grid gap-4 lg:grid-cols-6">
-        {[
-          { label: "Companies", value: stats?.companies ?? 0 },
-          { label: "Contacts", value: stats?.contacts ?? 0 },
-          { label: "Open Deals", value: stats?.openDeals ?? 0 },
-          { label: "Won", value: stats?.wonDeals ?? 0 },
-          { label: "Tasks Open", value: stats?.tasksOpen ?? 0 },
-          { label: "Outreach Sent", value: stats?.outreachSent ?? 0 }
-        ].map((s) => (
-          <div key={s.label} className="rounded-2xl border border-mab-navy/10 bg-white p-4 text-center shadow-sm">
-            <p className="text-2xl font-semibold text-mab-navy">{s.value}</p>
-            <p className="text-xs text-mab-slate">{s.label}</p>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card title="Today’s Priority Tasks" subtitle="Auto-ranked from the new pipeline">
+          <ul className="space-y-3 text-sm text-mab-slate">
+            {payload.priorityTasks.length ? (
+              payload.priorityTasks.map((task) => <li key={task}>{task}</li>)
+            ) : (
+              <li className="rounded-xl border border-mab-gold/30 bg-white/70 px-3 py-2 text-mab-navy">
+                {status === "loading"
+                  ? "Syncing priorities..."
+                  : "No tasks yet. Start a rapid capture to populate this list."}
+              </li>
+            )}
+          </ul>
+        </Card>
+        <Card title="Next Calls" subtitle="Auto-sorted by urgency">
+          <ul className="space-y-3 text-sm text-mab-slate">
+            {payload.nextCalls.length ? (
+              payload.nextCalls.map((call) => <li key={call}>{call}</li>)
+            ) : (
+              <li className="rounded-xl border border-mab-gold/30 bg-white/70 px-3 py-2 text-mab-navy">
+                {status === "loading" ? "Refreshing call queue..." : "No scheduled calls yet."}
+              </li>
+            )}
+          </ul>
+        </Card>
+        <Card title="Top Deals by Momentum" subtitle="AI-calculated engagement">
+          <ul className="space-y-3 text-sm text-mab-slate">
+            {payload.topDeals.length ? (
+              payload.topDeals.map((deal) => <li key={deal}>{deal}</li>)
+            ) : (
+              <li className="rounded-xl border border-mab-gold/30 bg-white/70 px-3 py-2 text-mab-navy">
+                {status === "loading" ? "Calculating momentum..." : "No momentum data yet."}
+              </li>
+            )}
+          </ul>
+        </Card>
+        <Card title="Finish Line Focus" subtitle="Unified progress snapshot">
+          <div className="space-y-3 text-sm text-mab-slate">
+            <p>Capture, memory, assets, and compliance are converging toward the final loop.</p>
+            <PrimaryButton label="Open finish line" href="/finish-line" ariaLabel="Open finish line" />
           </div>
         ))}
       </div>

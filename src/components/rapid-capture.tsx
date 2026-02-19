@@ -6,47 +6,7 @@ import { Textarea } from "./ui/textarea";
 
 type CaptureStatus = "idle" | "saving" | "saved" | "error";
 
-type CompanyOption = {
-  id: string;
-  name: string;
-  domain?: string | null;
-};
-
-type DealOption = {
-  id: string;
-  companyId: string;
-  stage: string;
-  value?: number | null;
-};
-
-type ContactOption = {
-  id: string;
-  companyId: string;
-  name: string;
-  title?: string | null;
-};
-
-type TaskItem = {
-  id: string;
-  title: string;
-  description?: string | null;
-  status: string;
-  dueAt?: string | null;
-};
-
-type StructuredExtract = {
-  painPoints?: string[];
-  roiHooks?: string[];
-  objections?: string[];
-  nextSteps?: string[];
-  urgencySignals?: string[];
-  recommendation?: {
-    recommendedNextStep: string;
-    recommendedOfferType?: string;
-  };
-};
-
-export function RapidCapture() {
+export function RapidCapture({ companyId, dealId }: { companyId?: string; dealId?: string }) {
   const [open, setOpen] = useState(false);
   const [rawText, setRawText] = useState("");
   const [status, setStatus] = useState<CaptureStatus>("idle");
@@ -233,9 +193,8 @@ export function RapidCapture() {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-csrf-token": "local-dev" },
       body: JSON.stringify({
-        companyId: selectedCompanyId,
-        dealId: selectedDealId,
-        contactId: selectedContactId,
+        companyId: companyId ?? "demo-company",
+        dealId,
         rawText,
         tags: ["rapid-capture"]
       })
