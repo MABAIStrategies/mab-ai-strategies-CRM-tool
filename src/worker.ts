@@ -1,7 +1,12 @@
 import { z } from "zod";
 import { prisma } from "./lib/db";
 import { claimNextJob, updateJobStatus } from "./lib/queue";
-import { getAIProvider, logValidationError, sanitizeInput } from "./lib/ai-provider";
+import {
+  getAIProvider,
+  getProviderUsageMetrics,
+  logValidationError,
+  sanitizeInput
+} from "./lib/ai-provider";
 import { structuredExtractSchema } from "./lib/extract";
 import { syncMemoryFromAsset, syncMemoryFromNote } from "./lib/memory";
 
@@ -202,6 +207,8 @@ async function runWorker() {
       continue;
     }
 
+    const jobStart = Date.now();
+    const metricsStart = getProviderUsageMetrics();
     try {
       const handler = handlers[job.type as JobType];
       if (!handler) {
@@ -214,7 +221,26 @@ async function runWorker() {
       });
       await withTimeout(handler(job.payload as Record<string, unknown>), JOB_TIMEOUT_MS);
       await updateJobStatus({ jobId: job.id, status: "SUCCEEDED" });
-      logInfo("Job succeeded", { jobId: job.id, type: job.type });
+      const metricsEnd = getProviderUsageMetrics();
+      logInfo("Job succeeded", {
+        jobId: job.id,
+        type: job.type,
+        durationMs: Date.now() - jobStart,
+        providerUsage: {
+          provider: metricsEnd.provider,
+          model: metricsEnd.model,
+          requests: metricsEnd.requests - metricsStart.requests,
+          tokens: metricsEnd.tokens - metricsStart.tokens,
+          cost: metricsEnd.cost - metricsStart.cost,
+          operations: Object.entries(metricsEnd.operations).reduce<Record<string, number>>(
+            (acc, [key, value]) => {
+              acc[key] = value - (metricsStart.operations[key] ?? 0);
+              return acc;
+            },
+            {}
+          )
+        }
+      });
     } catch (error) {
       const attempts = job.attempts + 1;
       const delay = Math.min(60000, 1000 * 2 ** attempts);
@@ -226,11 +252,27 @@ async function runWorker() {
         lastError,
         runAt
       });
+      const metricsEnd = getProviderUsageMetrics();
       logError("Job failed", {
         jobId: job.id,
         type: job.type,
         attempts,
-        lastError
+        lastError,
+        durationMs: Date.now() - jobStart,
+        providerUsage: {
+          provider: metricsEnd.provider,
+          model: metricsEnd.model,
+          requests: metricsEnd.requests - metricsStart.requests,
+          tokens: metricsEnd.tokens - metricsStart.tokens,
+          cost: metricsEnd.cost - metricsStart.cost,
+          operations: Object.entries(metricsEnd.operations).reduce<Record<string, number>>(
+            (acc, [key, value]) => {
+              acc[key] = value - (metricsStart.operations[key] ?? 0);
+              return acc;
+            },
+            {}
+          )
+        }
       });
     }
   }
