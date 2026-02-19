@@ -1,45 +1,78 @@
-import { ArrowUpRight, CheckCircle2, Clock, Sun } from "lucide-react";
 import Link from "next/link";
+import { CheckCircle2, CalendarCheck, LineChart } from "lucide-react";
 
-import InsightCard from "@/components/layout/InsightCard";
+import PageHero from "@/components/layout/page-hero";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function TodayPage() {
   return (
-    <section className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.4em] text-brand-gold/70">
-            Today
-          </p>
-          <h2 className="mt-3 text-3xl font-semibold text-brand-ivory">
-            Focus on the top priorities for a high-impact day.
-          </h2>
-        </div>
-        <Button variant="outline" asChild>
-          <Link href="/search">
-            Run a Quick Search <ArrowUpRight size={16} />
-          </Link>
-        </Button>
-      </div>
+    <div className="flex flex-col gap-8">
+      <PageHero
+        title="Today Focus"
+        description="Stay locked on the highest-leverage moves. Review daily priorities, accelerate follow-ups, and keep the client momentum glimmering."
+        badge="Today"
+        ctaLabel="Sync Workspace"
+        ctaHref="/workspace"
+      />
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <InsightCard
-          title="Morning Brief"
-          description="Review your executive summary with overnight changes and key stakeholder updates."
-          icon={<Sun size={20} />}
-        />
-        <InsightCard
-          title="Momentum Queue"
-          description="Lock in next actions for pipeline deals, partnership follow-ups, and renewal touchpoints."
-          icon={<Clock size={20} />}
-        />
-        <InsightCard
-          title="Mission Completion"
-          description="Close loops on mission-critical deliverables and notify account leaders automatically."
-          icon={<CheckCircle2 size={20} />}
-        />
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card className="transition hover:-translate-y-1 hover:border-mab-gold/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3">
+              <CalendarCheck className="h-5 w-5 text-mab-gold" />
+              Priority Sequence
+            </CardTitle>
+            <CardDescription>
+              Three high-impact actions are queued for the day.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {["Confirm Q2 partnership brief", "Review AI strategy deck", "Send executive recap"].map(
+              (task) => (
+                <div
+                  key={task}
+                  className="flex items-center justify-between rounded-lg border border-mab-navy-700/70 bg-mab-navy-700/40 px-4 py-3"
+                >
+                  <span className="text-sm">{task}</span>
+                  <CheckCircle2 className="h-4 w-4 text-mab-gold" />
+                </div>
+              )
+            )}
+            <Button variant="outline" className="w-full" asChild>
+              <Link href="/assets">Open Priority Assets</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="transition hover:-translate-y-1 hover:border-mab-gold/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3">
+              <LineChart className="h-5 w-5 text-mab-gold" />
+              Momentum Snapshot
+            </CardTitle>
+            <CardDescription>
+              Intelligent signals show a 12% lift in engagement this week.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-4">
+              <div className="rounded-lg border border-mab-navy-700/70 bg-mab-navy-700/40 p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-mab-gold/70">
+                  Confidence Score
+                </p>
+                <p className="text-3xl font-semibold">92%</p>
+                <p className="text-sm text-mab-ivory/60">
+                  AI alignment across key accounts.
+                </p>
+              </div>
+              <Button className="w-full" asChild>
+                <Link href="/search">Launch Deep Search</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </section>
+    </div>
   );
 }

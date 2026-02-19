@@ -1,0 +1,6 @@
+<svg width="240" height="64" viewBox="0 0 240 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="64" height="64" rx="16" fill="#0B1F3A" />
+  <path d="M18 42L26 22L34 42L42 22L50 42" stroke="#C9A227" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <text x="78" y="34" fill="#F8F3E7" font-family="'Segoe UI', sans-serif" font-size="22" font-weight="700">MAB AI</text>
+  <text x="78" y="54" fill="#C9A227" font-family="'Segoe UI', sans-serif" font-size="14" letter-spacing="2">STRATEGIES</text>
+</svg>

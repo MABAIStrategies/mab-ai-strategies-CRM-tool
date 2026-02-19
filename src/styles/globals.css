@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-mab-navy text-mab-ivory antialiased;
+  font-feature-settings: "ss01" 1, "ss03" 1;
+}
+
+::selection {
+  background: rgba(201, 162, 39, 0.35);
+  color: #0a0f1a;
+}
+
+.mab-glow {
+  background: radial-gradient(circle at top left, rgba(201, 162, 39, 0.18), transparent 50%),
+    radial-gradient(circle at 30% 20%, rgba(201, 162, 39, 0.25), transparent 45%);
+}
