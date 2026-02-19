@@ -3,50 +3,33 @@
 import { useEffect, useState } from "react";
 import { Card } from "../../../src/components/ui/card";
 import { PrimaryButton } from "../../../src/components/ui/primary-button";
+import { getTodayDashboardData } from "../../../src/lib/dashboard-queries";
 
-type TodayPayload = {
-  priorityTasks: string[];
-  nextCalls: string[];
-  topDeals: string[];
+export const revalidate = 60;
+
+const formatTime = (date: Date | string) => {
+  const normalizedDate = typeof date === "string" ? new Date(date) : date;
+  return normalizedDate.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit"
+  });
 };
 
-const emptyPayload: TodayPayload = {
-  priorityTasks: [],
-  nextCalls: [],
-  topDeals: []
-};
+const formatStage = (stage: string) =>
+  stage
+    .replace(/_/g, " ")
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
 
-export default function TodayPage() {
-  const [payload, setPayload] = useState<TodayPayload>(emptyPayload);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+export default async function TodayPage() {
+  const { priorityTasks, upcomingActivities, topDeals } = await getTodayDashboardData();
 
-  useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      try {
-        const response = await fetch("/api/today", {
-          headers: { "x-csrf-token": "local-dev" }
-        });
-        if (!response.ok) {
-          throw new Error("Unable to load today data.");
-        }
-        const data = (await response.json()) as TodayPayload;
-        if (mounted) {
-          setPayload(data);
-          setStatus("ready");
-        }
-      } catch (error) {
-        if (mounted) {
-          console.error(error);
-          setStatus("error");
-        }
-      }
-    };
-    load();
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const prioritySubtitle = `${priorityTasks.length} due · ${priorityTasks.filter((task) => task.status === "DOING").length} in motion`;
+  const callsSubtitle = upcomingActivities.length
+    ? "Auto-sorted by urgency"
+    : "No upcoming calls yet";
+  const dealsSubtitle = topDeals.length ? "AI-calculated engagement" : "Add deals to see momentum";
 
   return (
     <div className="space-y-8">
@@ -59,56 +42,72 @@ export default function TodayPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <a href="/deals/new" className="inline-flex rounded-xl bg-mab-navy px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-mab-gold hover:text-mab-navy">
-            + New Deal
-          </a>
-          <a href="/pipeline" className="inline-flex rounded-xl bg-mab-navy/5 px-5 py-3 text-sm font-medium text-mab-navy transition hover:bg-mab-navy hover:text-white">
-            View Pipeline
-          </a>
-          <button
-            onClick={getInsight}
-            className="rounded-xl bg-mab-gold/20 px-5 py-3 text-sm font-medium text-mab-navy transition hover:bg-mab-gold"
-          >
-            AI Daily Brief
-          </button>
+          <PrimaryButton
+            label="Start rapid capture"
+            href="/workspace?capture=1"
+            ariaLabel="Start rapid capture flow"
+          />
+          <PrimaryButton
+            label="Launch command palette"
+            variant="outline"
+            href="/search"
+            ariaLabel="Open command palette"
+          />
+          <PrimaryButton
+            label="View finish line"
+            variant="outline"
+            href="/finish-line"
+            ariaLabel="View finish line dashboard"
+          />
         </div>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card title="Today’s Priority Tasks" subtitle="Auto-ranked from the new pipeline">
-          <ul className="space-y-3 text-sm text-mab-slate">
-            {payload.priorityTasks.length ? (
-              payload.priorityTasks.map((task) => <li key={task}>{task}</li>)
-            ) : (
-              <li className="rounded-xl border border-mab-gold/30 bg-white/70 px-3 py-2 text-mab-navy">
-                {status === "loading"
-                  ? "Syncing priorities..."
-                  : "No tasks yet. Start a rapid capture to populate this list."}
-              </li>
-            )}
-          </ul>
+        <Card title="Today’s Priority Tasks" subtitle={prioritySubtitle} data={priorityTasks}>
+          {(tasks) => (
+            <ul className="space-y-3 text-sm text-mab-slate">
+              {tasks.length ? (
+                tasks.map((task) => (
+                  <li key={task.id}>
+                    {task.title} · {task.companyName}
+                    {task.dealStage ? ` (${formatStage(task.dealStage)})` : ""}
+                  </li>
+                ))
+              ) : (
+                <li className="text-mab-slate/70">No tasks due yet. Queue the next action in Rapid Capture.</li>
+              )}
+            </ul>
+          )}
         </Card>
-        <Card title="Next Calls" subtitle="Auto-sorted by urgency">
-          <ul className="space-y-3 text-sm text-mab-slate">
-            {payload.nextCalls.length ? (
-              payload.nextCalls.map((call) => <li key={call}>{call}</li>)
-            ) : (
-              <li className="rounded-xl border border-mab-gold/30 bg-white/70 px-3 py-2 text-mab-navy">
-                {status === "loading" ? "Refreshing call queue..." : "No scheduled calls yet."}
-              </li>
-            )}
-          </ul>
+        <Card title="Next Calls" subtitle={callsSubtitle} data={upcomingActivities}>
+          {(activities) => (
+            <ul className="space-y-3 text-sm text-mab-slate">
+              {activities.length ? (
+                activities.map((activity) => (
+                  <li key={activity.id}>
+                    {formatTime(activity.occurredAt)} — {activity.contactName ?? "Unassigned"} ({activity.companyName})
+                  </li>
+                ))
+              ) : (
+                <li className="text-mab-slate/70">Schedule a call to populate your command queue.</li>
+              )}
+            </ul>
+          )}
         </Card>
-        <Card title="Top Deals by Momentum" subtitle="AI-calculated engagement">
-          <ul className="space-y-3 text-sm text-mab-slate">
-            {payload.topDeals.length ? (
-              payload.topDeals.map((deal) => <li key={deal}>{deal}</li>)
-            ) : (
-              <li className="rounded-xl border border-mab-gold/30 bg-white/70 px-3 py-2 text-mab-navy">
-                {status === "loading" ? "Calculating momentum..." : "No momentum data yet."}
-              </li>
-            )}
-          </ul>
+        <Card title="Top Deals by Momentum" subtitle={dealsSubtitle} data={topDeals}>
+          {(deals) => (
+            <ul className="space-y-3 text-sm text-mab-slate">
+              {deals.length ? (
+                deals.map((deal) => (
+                  <li key={deal.id}>
+                    {deal.companyName} — Momentum {deal.momentumScore}
+                  </li>
+                ))
+              ) : (
+                <li className="text-mab-slate/70">No momentum data yet. Add a deal to start scoring.</li>
+              )}
+            </ul>
+          )}
         </Card>
         <Card title="Finish Line Focus" subtitle="Unified progress snapshot">
           <div className="space-y-3 text-sm text-mab-slate">

@@ -6,8 +6,8 @@ import { Textarea } from "./ui/textarea";
 
 type CaptureStatus = "idle" | "saving" | "saved" | "error";
 
-export function RapidCapture({ companyId, dealId }: { companyId?: string; dealId?: string }) {
-  const [open, setOpen] = useState(false);
+export function RapidCapture({ defaultOpen = false }: { defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   const [rawText, setRawText] = useState("");
   const [status, setStatus] = useState<CaptureStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -39,7 +39,11 @@ export function RapidCapture({ companyId, dealId }: { companyId?: string; dealId
   const isSelectionReady = Boolean(selectedCompanyId && selectedDealId && selectedContactId);
 
   useEffect(() => {
-    if (!rawText || !open || !isSelectionReady) {
+    setOpen(defaultOpen);
+  }, [defaultOpen]);
+
+  useEffect(() => {
+    if (!rawText || !open) {
       return;
     }
     const timeout = setTimeout(async () => {
