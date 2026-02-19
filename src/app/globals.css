@@ -7,21 +7,21 @@
 }
 
 body {
-  @apply bg-brand-midnight text-brand-ivory antialiased;
+  @apply bg-mab-blue text-mab-ivory antialiased;
+  font-feature-settings: "ss01", "ss02", "cv01", "cv02";
 }
 
-.brand-panel {
-  @apply rounded-3xl border border-white/5 bg-brand-deep/80 shadow-lg backdrop-blur;
+::selection {
+  background: rgba(214, 168, 75, 0.35);
 }
 
-.gold-divider {
-  @apply h-px bg-gradient-to-r from-transparent via-brand-gold/60 to-transparent;
+.glow-divider {
+  background: linear-gradient(90deg, rgba(214, 168, 75, 0.1), rgba(214, 168, 75, 0.6), rgba(214, 168, 75, 0.1));
 }
 
-.nav-link {
-  @apply flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-brand-ivory/70 transition-all hover:text-brand-ivory;
-}
-
-.nav-link-active {
-  @apply bg-brand-gold/15 text-brand-ivory shadow-[0_0_18px_rgba(216,180,92,0.2)];
+.shimmer-text {
+  background: linear-gradient(110deg, #f6f1e6 0%, #d6a84b 40%, #f6f1e6 80%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }

@@ -1,59 +1,39 @@
-import Link from "next/link";
-import { FolderPlus, ShieldCheck, Palette } from "lucide-react";
-
-import PageHero from "@/components/layout/page-hero";
+import { TopCommandBar } from "@/components/layout/top-command-bar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+const assets = [
+  { title: "AI Discovery Deck", tag: "Deck" },
+  { title: "Industry Signals Report", tag: "Intel" },
+  { title: "CRM Pilot Playbook", tag: "Playbook" }
+];
 
 export default function AssetsPage() {
   return (
-    <div className="flex flex-col gap-8">
-      <PageHero
-        title="Assets Vault"
-        description="Curate the official MAB AI Strategies intelligence library. Protect brand standards, deploy creative campaigns, and keep every artifact aligned."
-        badge="Assets"
-        ctaLabel="Search Assets"
-        ctaHref="/search"
-      />
-
+    <div className="space-y-8">
+      <TopCommandBar />
       <div className="grid gap-6 lg:grid-cols-3">
-        {[
-          {
-            title: "Brand Standards",
-            description: "Logos, colors, and executive messaging guidelines.",
-            icon: ShieldCheck
-          },
-          {
-            title: "Campaign Kits",
-            description: "Launch-ready collateral and AI-powered strategy briefs.",
-            icon: Palette
-          },
-          {
-            title: "New Asset",
-            description: "Add a new artifact to the intelligence vault.",
-            icon: FolderPlus
-          }
-        ].map((card) => {
-          const Icon = card.icon;
-          return (
-            <Card key={card.title} className="transition hover:-translate-y-1 hover:border-mab-gold/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-mab-gold/40 bg-mab-navy-700">
-                    <Icon className="h-5 w-5 text-mab-gold" />
-                  </div>
-                  {card.title}
-                </CardTitle>
-                <CardDescription>{card.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="outline" className="w-full" asChild>
-                  <Link href="/workspace">Open {card.title}</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
+        {assets.map((asset) => (
+          <div
+            key={asset.title}
+            className="rounded-3xl border border-mab-gold/20 bg-mab-blue-2/60 p-6 shadow-panel"
+          >
+            <div className="flex items-center justify-between">
+              <span className="rounded-full border border-mab-gold/40 px-3 py-1 text-xs text-mab-gold">
+                {asset.tag}
+              </span>
+              <span className="text-xs text-mab-ivory/60">Updated 2h ago</span>
+            </div>
+            <h3 className="mt-4 text-lg font-semibold text-mab-ivory">
+              {asset.title}
+            </h3>
+            <p className="mt-2 text-sm text-mab-ivory/70">
+              Launch the latest version, or schedule a tailored update.
+            </p>
+            <Button size="sm" className="mt-6">
+              Open asset
+            </Button>
+          </div>
+        ))}
       </div>
     </div>
   );

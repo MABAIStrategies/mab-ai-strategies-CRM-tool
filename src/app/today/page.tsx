@@ -1,77 +1,43 @@
-import Link from "next/link";
-import { CheckCircle2, CalendarCheck, LineChart } from "lucide-react";
-
-import PageHero from "@/components/layout/page-hero";
+import { TopCommandBar } from "@/components/layout/top-command-bar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+const priorities = [
+  {
+    title: "Morning pipeline review",
+    detail: "6 accounts need strategic notes before noon."
+  },
+  {
+    title: "Discovery call — Orion Labs",
+    detail: "Prep AI briefing + 3 deep-dive questions."
+  },
+  {
+    title: "Follow-up pulse",
+    detail: "Send recap to 2 stakeholders in Financial Services."
+  }
+];
 
 export default function TodayPage() {
   return (
-    <div className="flex flex-col gap-8">
-      <PageHero
-        title="Today Focus"
-        description="Stay locked on the highest-leverage moves. Review daily priorities, accelerate follow-ups, and keep the client momentum glimmering."
-        badge="Today"
-        ctaLabel="Sync Workspace"
-        ctaHref="/workspace"
-      />
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="transition hover:-translate-y-1 hover:border-mab-gold/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-3">
-              <CalendarCheck className="h-5 w-5 text-mab-gold" />
-              Priority Sequence
-            </CardTitle>
-            <CardDescription>
-              Three high-impact actions are queued for the day.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {["Confirm Q2 partnership brief", "Review AI strategy deck", "Send executive recap"].map(
-              (task) => (
-                <div
-                  key={task}
-                  className="flex items-center justify-between rounded-lg border border-mab-navy-700/70 bg-mab-navy-700/40 px-4 py-3"
-                >
-                  <span className="text-sm">{task}</span>
-                  <CheckCircle2 className="h-4 w-4 text-mab-gold" />
-                </div>
-              )
-            )}
-            <Button variant="outline" className="w-full" asChild>
-              <Link href="/assets">Open Priority Assets</Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="transition hover:-translate-y-1 hover:border-mab-gold/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-3">
-              <LineChart className="h-5 w-5 text-mab-gold" />
-              Momentum Snapshot
-            </CardTitle>
-            <CardDescription>
-              Intelligent signals show a 12% lift in engagement this week.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-4">
-              <div className="rounded-lg border border-mab-navy-700/70 bg-mab-navy-700/40 p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-mab-gold/70">
-                  Confidence Score
-                </p>
-                <p className="text-3xl font-semibold">92%</p>
-                <p className="text-sm text-mab-ivory/60">
-                  AI alignment across key accounts.
-                </p>
+    <div className="space-y-8">
+      <TopCommandBar />
+      <div className="rounded-3xl border border-mab-gold/20 bg-mab-blue-2/60 p-8 shadow-panel">
+        <h2 className="text-xl font-semibold text-mab-ivory">Today's priorities</h2>
+        <div className="mt-6 space-y-4">
+          {priorities.map((item) => (
+            <div
+              key={item.title}
+              className="flex items-center justify-between rounded-2xl border border-mab-gold/10 bg-mab-blue/60 p-4"
+            >
+              <div>
+                <p className="text-sm font-semibold text-mab-ivory">{item.title}</p>
+                <p className="text-xs text-mab-ivory/70">{item.detail}</p>
               </div>
-              <Button className="w-full" asChild>
-                <Link href="/search">Launch Deep Search</Link>
+              <Button variant="outline" size="sm">
+                Act now
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          ))}
+        </div>
       </div>
     </div>
   );

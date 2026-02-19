@@ -1,0 +1,9 @@
+<svg width="220" height="64" viewBox="0 0 220 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="220" height="64" rx="14" fill="#0B1B3A"/>
+  <path d="M22 42L34 20L46 42" stroke="#D6A84B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M54 42V22L72 42V22" stroke="#F6F1E6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M82 42V22H98C104 22 108 25 108 31C108 37 104 42 98 42H82Z" stroke="#D6A84B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="122" y="38" font-family="'Segoe UI', sans-serif" font-size="18" fill="#F6F1E6" font-weight="600">
+    MAB AI Strategies
+  </text>
+</svg>

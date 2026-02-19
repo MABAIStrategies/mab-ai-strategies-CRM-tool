@@ -1,67 +1,48 @@
 "use client";
 
-import * as React from "react";
-import Link from "next/link";
-import { Sparkles, Zap, Command } from "lucide-react";
+import { Command, Bell, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { commandSchema } from "@/lib/schemas";
 
-export default function TopCommandBar() {
-  const [command, setCommand] = React.useState("");
-  const validation = React.useMemo(() => commandSchema.safeParse(command), [command]);
-
+export function TopCommandBar() {
   return (
-    <header className="flex w-full flex-col gap-4 border-b border-mab-navy-700/70 bg-mab-navy/80 px-6 py-5 backdrop-blur">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm uppercase tracking-[0.3em] text-mab-gold/70">
+            MAB AI Strategies
+          </p>
+          <h1 className="shimmer-text text-3xl font-semibold">
+            Hyper-interactive CRM cockpit
+          </h1>
+          <p className="mt-2 text-sm text-mab-ivory/70">
+            Keep momentum high with the command palette, proactive nudges, and
+            quick launch actions.
+          </p>
+        </div>
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-mab-gold/40 bg-mab-navy-700">
-            <Command className="h-5 w-5 text-mab-gold" />
-          </div>
-          <div>
-            <p className="text-sm uppercase tracking-[0.3em] text-mab-gold/70">
-              Command Bar
-            </p>
-            <h1 className="text-xl font-semibold">MAB AI Strategies CRM</h1>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button variant="outline" asChild>
-            <Link href="/search">
-              <Sparkles className="h-4 w-4" />
-              Deep Search
-            </Link>
+          <Button variant="outline" size="sm">
+            <Bell size={16} />
+            Alerts
           </Button>
-          <Button asChild>
-            <Link href="/assets">
-              <Zap className="h-4 w-4" />
-              Launch Asset
-            </Link>
+          <Button size="sm">
+            <Sparkles size={16} />
+            Create quick pulse
           </Button>
         </div>
       </div>
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
-          <div className="relative flex-1">
-            <Input
-              value={command}
-              onChange={(event) => setCommand(event.target.value)}
-              placeholder="Type a command, query, or action (e.g. ‘Summarize Q4 pipeline’)"
-              className="h-12 pl-12"
-            />
-            <Sparkles className="absolute left-4 top-3.5 h-5 w-5 text-mab-gold/70" />
-          </div>
-          <Button variant="secondary" className="h-12" asChild>
-            <Link href="/today">Activate Daily Focus</Link>
-          </Button>
+      <div className="relative overflow-hidden rounded-full">
+        <Input
+          placeholder="Search, jump, or start a workflow (⌘K)"
+          className="relative z-10 h-14 bg-mab-blue-2/80 text-base"
+        />
+        <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-mab-gold/10 to-transparent opacity-60 blur-lg animate-shimmer" />
+        <div className="pointer-events-none absolute right-4 top-1/2 z-20 flex -translate-y-1/2 items-center gap-2 rounded-full border border-mab-gold/30 bg-mab-blue-2/80 px-3 py-1 text-xs text-mab-ivory/70">
+          <Command size={14} />
+          ⌘K
         </div>
-        <p className="text-xs text-mab-ivory/60">
-          {validation.success
-            ? "Glimmer-ready. Press enter to deploy or tap a destination above."
-            : "Minimum 3 characters to calibrate a command."}
-        </p>
       </div>
-    </header>
+    </div>
   );
 }
