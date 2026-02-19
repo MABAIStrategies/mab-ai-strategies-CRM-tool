@@ -1,57 +1,60 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
+import Image from "next/image";
+import { useMemo, useState } from "react";
 import { SearchInput } from "./ui/search-input";
 import { PrimaryButton } from "./ui/primary-button";
 
 type SearchState = "idle" | "loading" | "error";
 
-type SearchResult =
-  | {
-      type: "company";
-      id: string;
-      title: string;
-      subtitle: string;
-      href: string;
-    }
-  | {
-      type: "memory";
-      id: string;
-      sourceType: "NOTE" | "ACTIVITY" | "ASSET" | "EMAIL" | "DOC_LINK" | "OTHER";
-      sourceId: string;
-      title: string;
-      excerpt: string;
-      distance: number;
-      href: string;
-    };
-
-const badgeMap: Record<SearchResult["type"], string> = {
-  company: "Company",
-  memory: "Memory"
+type CompanyHit = {
+  id: string;
+  name: string;
+  industry: string | null;
+  region: string | null;
+  domain: string | null;
 };
 
-const memoryLabelMap: Record<
-  Extract<SearchResult, { type: "memory" }>["sourceType"],
-  string
-> = {
-  NOTE: "Signal note",
-  ACTIVITY: "Activity log",
-  ASSET: "Sales asset",
-  EMAIL: "Email memory",
-  DOC_LINK: "Document link",
-  OTHER: "Memory signal"
+type NoteHit = {
+  id: string;
+  summary: string | null;
+  createdAt: string;
+  company: { name: string };
 };
+
+type MemoryHit = {
+  id: string;
+  sourceType: string;
+  sourceId: string;
+  searchText: string | null;
+  createdAt: string;
+  companyName: string | null;
+  matchType: "semantic" | "keyword";
+};
+
+type SearchResults = {
+  companies: CompanyHit[];
+  notes: NoteHit[];
+  memoryItems: MemoryHit[];
+};
+
+const emptyResults: SearchResults = { companies: [], notes: [], memoryItems: [] };
 
 export function GlobalSearch() {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
+  const [results, setResults] = useState<SearchResults>(emptyResults);
   const [state, setState] = useState<SearchState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const totalHits = useMemo(
+    () =>
+      results.companies.length + results.notes.length + results.memoryItems.length,
+    [results]
+  );
+
   const handleSearch = async () => {
     if (!query.trim()) {
-      setResults([]);
+      setResults(emptyResults);
       return;
     }
     setState("loading");
@@ -63,8 +66,12 @@ export function GlobalSearch() {
       if (!response.ok) {
         throw new Error("Search failed.");
       }
-      const data = await response.json();
-      setResults(data.results ?? []);
+      const data = (await response.json()) as SearchResults;
+      setResults({
+        companies: data.companies ?? [],
+        notes: data.notes ?? [],
+        memoryItems: data.memoryItems ?? []
+      });
       setState("idle");
     } catch (error) {
       setState("error");
@@ -73,40 +80,35 @@ export function GlobalSearch() {
   };
 
   return (
-    <div className="space-y-6 rounded-3xl border border-mab-gold/30 bg-mab-ivory/80 p-6 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-mab-gold/40 bg-white shadow-glow">
-            <img src="/branding/mab-logo.svg" alt="MAB AI Strategies logo" className="h-7 w-7" />
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-mab-gold">
-              MAB Memory Console
-            </p>
-            <h2 className="text-xl font-semibold text-mab-navy">
-              Hyper-interactive semantic search
-            </h2>
-            <p className="text-sm text-mab-slate">
-              Surface the highest-intent signals across notes, assets, and activity.
-            </p>
-          </div>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-mab-gold/30 bg-mab-ivory/80 p-4 shadow-sm">
+        <Image
+          src="/branding/mab-logo.svg"
+          alt="MAB AI Strategies logo"
+          width={160}
+          height={48}
+          className="h-10 w-auto"
+        />
+        <div className="flex-1 space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-mab-gold">
+            MAB AI Strategies
+          </p>
+          <p className="text-sm text-mab-slate">
+            Hyper-interactive memory intelligence for every conversation.
+          </p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <p className="text-xs uppercase tracking-[0.3em] text-mab-gold">Lead Strategist</p>
-            <p className="text-sm font-semibold text-mab-navy">MAB AI Strategies</p>
-          </div>
-          <img
-            src="/branding/mab-headshot.svg"
-            alt="Professional headshot"
-            className="h-12 w-12 rounded-full border-2 border-mab-gold object-cover"
-          />
-        </div>
+        <Image
+          src="/branding/mab-headshot.svg"
+          alt="MAB AI Strategies professional headshot"
+          width={64}
+          height={64}
+          className="h-14 w-14 rounded-full border border-mab-gold/60 bg-white shadow-glow"
+        />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+      <div className="space-y-4">
         <SearchInput
-          placeholder="Search memory artifacts, notes, assets, and companies"
+          placeholder="Search memory artifacts, notes, and companies"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => {
@@ -115,86 +117,102 @@ export function GlobalSearch() {
             }
           }}
         />
-        <div className="flex flex-wrap gap-3">
-          <PrimaryButton
-            label={state === "loading" ? "Calibrating..." : "Run memory scan"}
-            onClick={handleSearch}
-            ariaLabel="Run memory scan"
-            disabled={state === "loading"}
-          />
-          <PrimaryButton
-            label="Open memory workspace"
-            variant="outline"
-            href="/workspace"
-            ariaLabel="Open memory workspace"
-          />
+        <div className="flex items-center justify-between text-xs text-mab-slate">
+          <span>{state === "loading" ? "Searching..." : "Press Enter to search"}</span>
+          <span className="font-medium text-mab-navy">
+            {totalHits > 0 ? `${totalHits} curated hits` : "Awaiting your query"}
+          </span>
         </div>
+        {errorMessage ? (
+          <p className="text-xs text-red-600" role="alert">
+            {errorMessage}
+          </p>
+        ) : null}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-mab-slate">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex h-2 w-2 animate-pulse-glow rounded-full bg-mab-gold" />
-          {state === "loading" ? "Synchronizing embeddings..." : "Press Enter or click Run memory scan"}
-        </div>
-        <span className="rounded-full border border-mab-gold/40 bg-white px-3 py-1 uppercase tracking-[0.3em] text-mab-navy">
-          Semantic + exact
-        </span>
-      </div>
-
-      {errorMessage ? (
-        <p className="text-xs text-red-600" role="alert">
-          {errorMessage}
-        </p>
-      ) : null}
-
-      {results.length > 0 ? (
-        <div className="grid gap-4 lg:grid-cols-2">
-          {results.map((result) => (
-            <div
-              key={`${result.type}-${result.id}`}
-              className="group flex h-full flex-col justify-between gap-4 rounded-2xl border border-mab-gold/20 bg-white/80 p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-glow"
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-xs text-mab-slate">
-                  <span className="rounded-full border border-mab-gold/40 bg-mab-ivory px-3 py-1 uppercase tracking-[0.3em] text-mab-navy">
-                    {badgeMap[result.type]}
-                  </span>
-                  {result.type === "memory" ? (
-                    <span className="text-mab-gold">
-                      {memoryLabelMap[result.sourceType]}
-                    </span>
+      {totalHits > 0 ? (
+        <div className="grid gap-6 lg:grid-cols-3">
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-mab-navy">Companies</h3>
+              <span className="text-xs text-mab-slate">
+                {results.companies.length} results
+              </span>
+            </div>
+            <div className="space-y-3">
+              {results.companies.map((company) => (
+                <div
+                  key={company.id}
+                  className="group rounded-xl border border-mab-gold/20 bg-white/80 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-mab-gold/60 hover:shadow-glow"
+                >
+                  <p className="text-sm font-semibold text-mab-navy">{company.name}</p>
+                  <p className="mt-1 text-xs text-mab-slate">
+                    {company.industry ?? "Industry TBD"} ·{" "}
+                    {company.region ?? "Region TBD"}
+                  </p>
+                  {company.domain ? (
+                    <p className="mt-1 text-xs text-mab-slate">{company.domain}</p>
                   ) : null}
                 </div>
-                <div>
-                  <h3 className="text-base font-semibold text-mab-navy">
-                    {result.title}
-                  </h3>
-                  <p className="mt-2 text-sm text-mab-slate">
-                    {result.type === "memory" ? result.excerpt : result.subtitle}
+              ))}
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-mab-navy">Notes</h3>
+              <span className="text-xs text-mab-slate">{results.notes.length} results</span>
+            </div>
+            <div className="space-y-3">
+              {results.notes.map((note) => (
+                <div
+                  key={note.id}
+                  className="group rounded-xl border border-mab-gold/20 bg-white/80 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-mab-gold/60 hover:shadow-glow"
+                >
+                  <p className="text-xs font-semibold text-mab-gold">
+                    {note.company?.name ?? "Company"}
+                  </p>
+                  <p className="mt-2 text-sm text-mab-navy">
+                    {note.summary ?? "Summary pending — open for detail."}
+                  </p>
+                  <p className="mt-2 text-[11px] text-mab-slate">
+                    Captured: {new Date(note.createdAt).toLocaleDateString()}
                   </p>
                 </div>
-              </div>
-              <div className="flex items-center justify-between text-xs text-mab-slate">
-                <span>
-                  {result.type === "memory"
-                    ? `Relevance score: ${Math.max(0, 1 - result.distance).toFixed(2)}`
-                    : "Account signal"}
-                </span>
-                <Link
-                  href={result.href}
-                  className="rounded-full border border-mab-gold/40 px-3 py-1 text-xs font-medium text-mab-navy transition hover:bg-mab-navy hover:text-white"
-                >
-                  Open signal →
-                </Link>
-              </div>
+              ))}
             </div>
-          ))}
+          </section>
+
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-mab-navy">Memory Brain</h3>
+              <span className="text-xs text-mab-slate">
+                {results.memoryItems.length} results
+              </span>
+            </div>
+            <div className="space-y-3">
+              {results.memoryItems.map((memory) => (
+                <div
+                  key={memory.id}
+                  className="group rounded-xl border border-mab-gold/20 bg-white/80 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-mab-gold/60 hover:shadow-glow"
+                >
+                  <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.25em] text-mab-gold">
+                    <span>{memory.sourceType}</span>
+                    <span>{memory.matchType}</span>
+                  </div>
+                  <p className="mt-2 text-sm text-mab-navy">
+                    {memory.searchText ?? "Memory context loading..."}
+                  </p>
+                  <p className="mt-2 text-[11px] text-mab-slate">
+                    {memory.companyName ?? "Company TBD"} ·{" "}
+                    {new Date(memory.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
         </div>
-      ) : (
-        <div className="rounded-2xl border border-dashed border-mab-gold/40 bg-white/60 p-6 text-sm text-mab-slate">
-          Start with a high-intent query like “procurement urgency” to surface memory artifacts.
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }

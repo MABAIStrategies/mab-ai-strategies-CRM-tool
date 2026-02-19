@@ -8,7 +8,7 @@ import {
   sanitizeInput
 } from "./lib/ai-provider";
 import { structuredExtractSchema } from "./lib/extract";
-import { syncMemoryFromAsset, syncMemoryFromNote } from "./lib/memory";
+import { buildMemorySearchText, upsertMemoryItemForNote } from "./lib/memory";
 
 const ai = getAIProvider();
 
@@ -79,27 +79,18 @@ async function handleNoteProcess(payload: Record<string, unknown>) {
     throw error;
   }
   const extract = structuredExtractSchema.parse(extractResult);
-
-  await prisma.$transaction(async (transaction) => {
-    await transaction.note.update({
-      where: { id: noteId },
-      data: { summary, structuredExtract: extract }
-    });
-
-    if (extract.suggestedTasks?.length) {
-      await transaction.task.createMany({
-        data: extract.suggestedTasks.map((task) => ({
-          title: task.title,
-          description: task.description,
-          companyId: note.companyId,
-          dealId: note.dealId,
-          contactId: note.contactId
-        }))
-      });
-    }
+  const searchText = buildMemorySearchText({
+    rawText: note.rawText,
+    summary,
+    extract
   });
 
-  await syncMemoryFromNote({ note: updatedNote, summary, extract });
+  await prisma.note.update({
+    where: { id: noteId },
+    data: { summary, structuredExtract: extract, searchText }
+  });
+
+  await upsertMemoryItemForNote({ note, summary, extract, searchText });
 }
 
 async function handleDealStageChecklist(payload: Record<string, unknown>) {

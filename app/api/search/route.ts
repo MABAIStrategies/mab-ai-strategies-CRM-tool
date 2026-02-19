@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { getAIProvider, sanitizeInput } from "../../../src/lib/ai-provider";
 import { prisma } from "../../../src/lib/db";
+import { searchMemoryItems } from "../../../src/lib/memory";
 import { rateLimit } from "../../../src/lib/rate-limit";
 
 const ai = getAIProvider();
@@ -96,64 +97,50 @@ export async function GET(request: Request) {
     );
   }
   const { searchParams } = new URL(request.url);
-  const query = sanitizeInput(searchParams.get("q") ?? "");
-
+  const query = searchParams.get("q")?.trim() ?? "";
   if (!query) {
-    const response = NextResponse.json({ results: [] satisfies SearchResult[] });
-    response.headers.set("Access-Control-Allow-Origin", "*");
-    response.headers.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-    response.headers.set("Access-Control-Allow-Headers", "Content-Type");
-    return response;
+    const emptyResponse = NextResponse.json({
+      companies: [],
+      notes: [],
+      memoryItems: []
+    });
+    emptyResponse.headers.set("Access-Control-Allow-Origin", "*");
+    emptyResponse.headers.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    emptyResponse.headers.set("Access-Control-Allow-Headers", "Content-Type");
+    return emptyResponse;
   }
 
-  const companies = await prisma.company.findMany({
-    where: { name: { contains: query, mode: "insensitive" } },
-    take: 4
-  });
+  const [companies, notes, memoryItems] = await Promise.all([
+    prisma.company.findMany({
+      where: { name: { contains: query, mode: "insensitive" } },
+      take: 5,
+      select: {
+        id: true,
+        name: true,
+        industry: true,
+        region: true,
+        domain: true
+      }
+    }),
+    prisma.note.findMany({
+      where: {
+        deletedAt: null,
+        OR: [
+          { searchText: { contains: query, mode: "insensitive" } },
+          { summary: { contains: query, mode: "insensitive" } },
+          { rawText: { contains: query, mode: "insensitive" } }
+        ]
+      },
+      take: 5,
+      orderBy: { createdAt: "desc" },
+      include: {
+        company: { select: { name: true } }
+      }
+    }),
+    searchMemoryItems(query, 5)
+  ]);
 
-  const embedding = await ai.embed(query);
-  const vectorLiteral = `'[${embedding.map((value) => Number(value).toFixed(6)).join(",")}]'`;
-
-  const memoryRows = await prisma.$queryRaw<MemorySearchRow[]>`
-    SELECT
-      id,
-      "sourceType",
-      "sourceId",
-      "companyId",
-      "dealId",
-      "contactId",
-      "searchText",
-      "extractedFacts",
-      "createdAt",
-      ("embedding" <-> ${Prisma.raw(`${vectorLiteral}::vector`)}) AS distance
-    FROM "MemoryItem"
-    WHERE "embedding" IS NOT NULL AND "deletedAt" IS NULL
-    ORDER BY distance ASC
-    LIMIT 10
-  `;
-
-  const memoryResults: SearchResult[] = memoryRows.map((row) => ({
-    type: "memory",
-    id: row.id,
-    sourceType: row.sourceType,
-    sourceId: row.sourceId,
-    title: buildMemoryTitle(row.sourceType, row.extractedFacts),
-    excerpt: buildMemoryExcerpt(row.searchText, row.extractedFacts),
-    distance: row.distance,
-    href: buildMemoryHref(row.sourceType, row.sourceId)
-  }));
-
-  const companyResults: SearchResult[] = companies.map((company) => ({
-    type: "company",
-    id: company.id,
-    title: company.name,
-    subtitle: company.industry ?? "Company account",
-    href: `/workspace?company=${company.id}`
-  }));
-
-  const response = NextResponse.json({
-    results: [...memoryResults, ...companyResults]
-  });
+  const response = NextResponse.json({ companies, notes, memoryItems });
   response.headers.set("Access-Control-Allow-Origin", "*");
   response.headers.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   response.headers.set("Access-Control-Allow-Headers", "Content-Type");

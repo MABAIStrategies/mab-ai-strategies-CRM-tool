@@ -1,192 +1,165 @@
-import type { Asset, Note } from "@prisma/client";
-import type { StructuredExtract } from "./ai-provider";
-import { sanitizeInput } from "./ai-provider";
+import { Prisma, type Note } from "@prisma/client";
+import { getAIProvider, sanitizeInput, type StructuredExtract } from "./ai-provider";
 import { prisma } from "./db";
-import { enqueueJob } from "./queue";
 
-const MAX_EXCERPT_LENGTH = 320;
+const ai = getAIProvider();
+const MAX_SEARCH_TEXT_LENGTH = 4000;
 
-type MemoryPayload = {
-  sourceType: "NOTE" | "ACTIVITY" | "ASSET";
+export type MemorySearchHit = {
+  id: string;
+  sourceType: string;
   sourceId: string;
-  companyId?: string | null;
-  dealId?: string | null;
-  contactId?: string | null;
-  extractedFacts: Record<string, unknown>;
-  searchText: string;
+  searchText: string | null;
+  createdAt: Date;
+  companyName: string | null;
+  matchType: "semantic" | "keyword";
 };
 
-const flattenValue = (value: unknown): string[] => {
-  if (!value) {
+export const isPgVectorEnabled = () => process.env.PGVECTOR_ENABLED === "true";
+
+const trimSearchText = (text: string) =>
+  text.length > MAX_SEARCH_TEXT_LENGTH ? text.slice(0, MAX_SEARCH_TEXT_LENGTH) : text;
+
+export function buildMemorySearchText(payload: {
+  rawText: string;
+  summary?: string | null;
+  extract?: StructuredExtract | null;
+}) {
+  const extractText = payload.extract ? JSON.stringify(payload.extract) : "";
+  const combined = [payload.rawText, payload.summary, extractText].filter(Boolean).join(" ");
+  return trimSearchText(sanitizeInput(combined));
+}
+
+export async function generateEmbedding(text: string) {
+  const cleaned = sanitizeInput(text);
+  if (!cleaned) {
     return [];
   }
-  if (Array.isArray(value)) {
-    return value.flatMap((entry) => flattenValue(entry));
-  }
-  if (typeof value === "object") {
-    return Object.values(value).flatMap((entry) => flattenValue(entry));
-  }
-  return [String(value)];
-};
+  return ai.embed(cleaned);
+}
 
-const normalizeSearchText = (segments: Array<string | string[] | undefined | null>) => {
-  const parts = segments.flatMap((segment) => {
-    if (!segment) {
-      return [];
-    }
-    if (Array.isArray(segment)) {
-      return segment;
-    }
-    return [segment];
-  });
-  return sanitizeInput(parts.join(" · ")).slice(0, 1000);
-};
+export function serializeEmbedding(embedding: number[]) {
+  return Buffer.from(Float32Array.from(embedding).buffer);
+}
 
-const buildExcerpt = (text: string) => {
-  if (!text) {
-    return "";
-  }
-  const normalized = sanitizeInput(text);
-  if (normalized.length <= MAX_EXCERPT_LENGTH) {
-    return normalized;
-  }
-  return `${normalized.slice(0, MAX_EXCERPT_LENGTH - 3)}...`;
-};
-
-const buildEmbedKey = (memoryItemId: string, searchText: string) => {
-  let hash = 0;
-  for (let index = 0; index < searchText.length; index += 1) {
-    hash = (hash * 31 + searchText.charCodeAt(index)) >>> 0;
-  }
-  return `memory-embed-${memoryItemId}-${hash}`;
-};
-
-const createOrUpdateMemoryItem = async ({
-  sourceType,
-  sourceId,
-  companyId,
-  dealId,
-  contactId,
-  extractedFacts,
-  searchText
-}: MemoryPayload) => {
+export async function upsertMemoryItemForNote(payload: {
+  note: Note;
+  summary?: string | null;
+  extract?: StructuredExtract | null;
+  searchText?: string;
+}) {
+  const searchText =
+    payload.searchText ??
+    buildMemorySearchText({
+      rawText: payload.note.rawText,
+      summary: payload.summary,
+      extract: payload.extract
+    });
+  const embedding = await generateEmbedding(searchText);
   const existing = await prisma.memoryItem.findFirst({
-    where: { sourceType, sourceId, deletedAt: null }
+    where: { sourceType: "NOTE", sourceId: payload.note.id, deletedAt: null }
   });
-
   const data = {
-    sourceType,
-    sourceId,
-    companyId: companyId ?? null,
-    dealId: dealId ?? null,
-    contactId: contactId ?? null,
-    extractedFacts,
-    searchText
+    sourceType: "NOTE" as const,
+    sourceId: payload.note.id,
+    companyId: payload.note.companyId,
+    dealId: payload.note.dealId,
+    contactId: payload.note.contactId,
+    extractedFacts: payload.extract ?? {},
+    searchText,
+    embedding: embedding.length ? serializeEmbedding(embedding) : null
   };
 
-  const memoryItem = existing
-    ? await prisma.memoryItem.update({ where: { id: existing.id }, data })
-    : await prisma.memoryItem.create({ data });
-
-  if (searchText) {
-    await enqueueJob({
-      type: "MEMORY_EMBED",
-      payload: { memoryItemId: memoryItem.id, text: searchText },
-      idempotencyKey: buildEmbedKey(memoryItem.id, searchText)
-    });
+  if (existing) {
+    return prisma.memoryItem.update({ where: { id: existing.id }, data });
   }
 
-  return memoryItem;
-};
-
-export async function syncMemoryFromNote({
-  note,
-  summary,
-  extract
-}: {
-  note: Note;
-  summary: string;
-  extract: StructuredExtract;
-}) {
-  const extractHighlights = flattenValue(extract);
-  const searchText = normalizeSearchText([
-    note.rawText,
-    summary,
-    extractHighlights,
-    note.tags
-  ]);
-  const excerpt = buildExcerpt(searchText);
-
-  return createOrUpdateMemoryItem({
-    sourceType: "NOTE",
-    sourceId: note.id,
-    companyId: note.companyId,
-    dealId: note.dealId,
-    contactId: note.contactId,
-    extractedFacts: {
-      summary,
-      highlights: extractHighlights,
-      tags: note.tags,
-      excerpt
-    },
-    searchText
-  });
+  return prisma.memoryItem.create({ data });
 }
 
-export async function syncMemoryFromAsset(asset: Asset) {
-  const searchText = normalizeSearchText([
-    asset.title,
-    asset.description ?? undefined,
-    asset.tags,
-    asset.type,
-    asset.status
-  ]);
-  const excerpt = buildExcerpt(searchText);
+export async function searchMemoryItems(query: string, take = 5) {
+  if (!query.trim()) {
+    return [];
+  }
 
-  return createOrUpdateMemoryItem({
-    sourceType: "ASSET",
-    sourceId: asset.id,
-    extractedFacts: {
-      title: asset.title,
-      description: asset.description ?? null,
-      tags: asset.tags,
-      status: asset.status,
-      type: asset.type,
-      excerpt
+  const keywordMatches = await prisma.memoryItem.findMany({
+    where: {
+      deletedAt: null,
+      searchText: { contains: query, mode: "insensitive" }
     },
-    searchText
+    include: { company: { select: { name: true } } },
+    take,
+    orderBy: { createdAt: "desc" }
   });
-}
 
-export async function syncMemoryFromActivity({
-  activityId,
-  companyId,
-  dealId,
-  contactId,
-  type,
-  outcome
-}: {
-  activityId: string;
-  companyId: string;
-  dealId?: string | null;
-  contactId?: string | null;
-  type: string;
-  outcome?: string | null;
-}) {
-  const searchText = normalizeSearchText([type, outcome ?? undefined]);
-  const excerpt = buildExcerpt(searchText);
+  const keywordHits: MemorySearchHit[] = keywordMatches.map((item) => ({
+    id: item.id,
+    sourceType: item.sourceType,
+    sourceId: item.sourceId,
+    searchText: item.searchText,
+    createdAt: item.createdAt,
+    companyName: item.company?.name ?? null,
+    matchType: "keyword"
+  }));
 
-  return createOrUpdateMemoryItem({
-    sourceType: "ACTIVITY",
-    sourceId: activityId,
-    companyId,
-    dealId,
-    contactId,
-    extractedFacts: {
-      type,
-      outcome: outcome ?? null,
-      excerpt
-    },
-    searchText
-  });
+  if (!isPgVectorEnabled()) {
+    return keywordHits;
+  }
+
+  try {
+    const embedding = await generateEmbedding(query);
+    if (!embedding.length) {
+      return keywordHits;
+    }
+    const vectorLiteral = `[${embedding.join(",")}]`;
+    const semanticMatches = await prisma.$queryRaw<
+      Array<{
+        id: string;
+        sourceType: string;
+        sourceId: string;
+        searchText: string | null;
+        createdAt: Date;
+        companyName: string | null;
+      }>
+    >(
+      Prisma.sql`
+        SELECT
+          m.id,
+          m."sourceType",
+          m."sourceId",
+          m."searchText",
+          m."createdAt",
+          c.name as "companyName"
+        FROM "MemoryItem" m
+        LEFT JOIN "Company" c ON c.id = m."companyId"
+        WHERE m."deletedAt" IS NULL
+          AND m."embedding" IS NOT NULL
+        ORDER BY m."embedding" <-> ${vectorLiteral}::vector
+        LIMIT ${take}
+      `
+    );
+
+    const semanticHits: MemorySearchHit[] = semanticMatches.map((item) => ({
+      id: item.id,
+      sourceType: item.sourceType,
+      sourceId: item.sourceId,
+      searchText: item.searchText,
+      createdAt: item.createdAt,
+      companyName: item.companyName,
+      matchType: "semantic"
+    }));
+
+    const merged = new Map<string, MemorySearchHit>();
+    semanticHits.forEach((hit) => merged.set(hit.id, hit));
+    keywordHits.forEach((hit) => {
+      if (!merged.has(hit.id)) {
+        merged.set(hit.id, hit);
+      }
+    });
+
+    return Array.from(merged.values()).slice(0, take);
+  } catch (error) {
+    console.warn("Vector search failed, using keyword matches only.", error);
+    return keywordHits;
+  }
 }
