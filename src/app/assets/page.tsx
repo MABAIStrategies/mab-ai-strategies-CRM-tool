@@ -1,40 +1,45 @@
-import { TopCommandBar } from "@/components/layout/top-command-bar";
-import { Button } from "@/components/ui/button";
+import { Archive, ArrowUpRight, Layers3, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 
-const assets = [
-  { title: "AI Discovery Deck", tag: "Deck" },
-  { title: "Industry Signals Report", tag: "Intel" },
-  { title: "CRM Pilot Playbook", tag: "Playbook" }
-];
+import InsightCard from "@/components/layout/InsightCard";
+import { Button } from "@/components/ui/button";
 
 export default function AssetsPage() {
   return (
-    <div className="space-y-8">
-      <TopCommandBar />
-      <div className="grid gap-6 lg:grid-cols-3">
-        {assets.map((asset) => (
-          <div
-            key={asset.title}
-            className="rounded-3xl border border-mab-gold/20 bg-mab-blue-2/60 p-6 shadow-panel"
-          >
-            <div className="flex items-center justify-between">
-              <span className="rounded-full border border-mab-gold/40 px-3 py-1 text-xs text-mab-gold">
-                {asset.tag}
-              </span>
-              <span className="text-xs text-mab-ivory/60">Updated 2h ago</span>
-            </div>
-            <h3 className="mt-4 text-lg font-semibold text-mab-ivory">
-              {asset.title}
-            </h3>
-            <p className="mt-2 text-sm text-mab-ivory/70">
-              Launch the latest version, or schedule a tailored update.
-            </p>
-            <Button size="sm" className="mt-6">
-              Open asset
-            </Button>
-          </div>
-        ))}
+    <section className="space-y-8">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.4em] text-brand-gold/70">
+            Assets
+          </p>
+          <h2 className="mt-3 text-3xl font-semibold text-brand-ivory">
+            Curate every strategic asset in a secure intelligence vault.
+          </h2>
+        </div>
+        <Button asChild>
+          <Link href="/workspace">
+            Back to Workspace <ArrowUpRight size={16} />
+          </Link>
+        </Button>
       </div>
-    </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <InsightCard
+          title="Playbook Library"
+          description="Access proven engagement playbooks and update best practices in real time."
+          icon={<Layers3 size={20} />}
+        />
+        <InsightCard
+          title="Secure Vault"
+          description="Protect sensitive assets with layered permissions and audit trails."
+          icon={<ShieldCheck size={20} />}
+        />
+        <InsightCard
+          title="Archive Studio"
+          description="Review historical strategies, archived campaigns, and win retrospectives."
+          icon={<Archive size={20} />}
+        />
+      </div>
+    </section>
   );
 }

@@ -1,13 +1,15 @@
-import clsx from "clsx";
+import type { HTMLAttributes } from "react";
 
-export function Skeleton({ className }: { className?: string }) {
+import { cn } from "@/lib/utils";
+
+export function Skeleton({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={clsx(
-        "animate-pulse rounded-lg bg-mab-navy/10",
+      className={cn(
+        "animate-pulse rounded-2xl bg-gradient-to-r from-brand-deep via-brand-gold/20 to-brand-deep bg-[length:200%_100%]",
         className
       )}
-      aria-hidden="true"
+      {...props}
     />
   );
 }

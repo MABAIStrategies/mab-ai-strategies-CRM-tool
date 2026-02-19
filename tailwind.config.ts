@@ -1,47 +1,55 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 const config: Config = {
   darkMode: ["class"],
   content: [
     "./src/pages/**/*.{ts,tsx}",
     "./src/components/**/*.{ts,tsx}",
-    "./src/app/**/*.{ts,tsx}"
+    "./src/app/**/*.{ts,tsx}",
   ],
   theme: {
     extend: {
       colors: {
-        "mab-blue": "#0B1B3A",
-        "mab-gold": "#D6A84B",
-        "mab-ivory": "#F6F1E6",
-        "mab-blue-2": "#0F254F",
-        "mab-gold-2": "#F2C76C"
+        brand: {
+          midnight: "#0A1C3B",
+          deep: "#0F2A55",
+          gold: "#D8B45C",
+          goldGlow: "#F5D27D",
+          ivory: "#F7F4EF",
+        },
       },
       boxShadow: {
-        glow: "0 0 20px rgba(214, 168, 75, 0.35)",
-        panel: "0 20px 60px rgba(8, 18, 38, 0.45)"
+        glow: "0 0 35px rgba(216, 180, 92, 0.35)",
+      },
+      backgroundImage: {
+        "brand-radial":
+          "radial-gradient(circle at top, rgba(245, 210, 125, 0.18), transparent 55%)",
+        "brand-sheen":
+          "linear-gradient(120deg, rgba(245, 210, 125, 0.18), rgba(216, 180, 92, 0.02), rgba(10, 28, 59, 0.8))",
+      },
+      animation: {
+        shimmer: "shimmer 6s ease-in-out infinite",
+        float: "float 5s ease-in-out infinite",
+        glow: "glow 4s ease-in-out infinite",
       },
       keyframes: {
         shimmer: {
-          "0%": { backgroundPosition: "-200% 0" },
-          "100%": { backgroundPosition: "200% 0" }
+          "0%, 100%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
         },
         float: {
           "0%, 100%": { transform: "translateY(0px)" },
-          "50%": { transform: "translateY(-6px)" }
+          "50%": { transform: "translateY(-6px)" },
         },
-        pulseSoft: {
-          "0%, 100%": { opacity: "0.55" },
-          "50%": { opacity: "1" }
-        }
+        glow: {
+          "0%, 100%": { opacity: "0.65" },
+          "50%": { opacity: "1" },
+        },
       },
-      animation: {
-        shimmer: "shimmer 6s linear infinite",
-        float: "float 6s ease-in-out infinite",
-        "pulse-soft": "pulseSoft 3s ease-in-out infinite"
-      }
-    }
+    },
   },
-  plugins: []
+  plugins: [tailwindcssAnimate],
 };
 
 export default config;

@@ -1,44 +1,45 @@
-import { TopCommandBar } from "@/components/layout/top-command-bar";
-import { Button } from "@/components/ui/button";
+import { ArrowUpRight, CheckCircle2, Clock, Sun } from "lucide-react";
+import Link from "next/link";
 
-const priorities = [
-  {
-    title: "Morning pipeline review",
-    detail: "6 accounts need strategic notes before noon."
-  },
-  {
-    title: "Discovery call — Orion Labs",
-    detail: "Prep AI briefing + 3 deep-dive questions."
-  },
-  {
-    title: "Follow-up pulse",
-    detail: "Send recap to 2 stakeholders in Financial Services."
-  }
-];
+import InsightCard from "@/components/layout/InsightCard";
+import { Button } from "@/components/ui/button";
 
 export default function TodayPage() {
   return (
-    <div className="space-y-8">
-      <TopCommandBar />
-      <div className="rounded-3xl border border-mab-gold/20 bg-mab-blue-2/60 p-8 shadow-panel">
-        <h2 className="text-xl font-semibold text-mab-ivory">Today's priorities</h2>
-        <div className="mt-6 space-y-4">
-          {priorities.map((item) => (
-            <div
-              key={item.title}
-              className="flex items-center justify-between rounded-2xl border border-mab-gold/10 bg-mab-blue/60 p-4"
-            >
-              <div>
-                <p className="text-sm font-semibold text-mab-ivory">{item.title}</p>
-                <p className="text-xs text-mab-ivory/70">{item.detail}</p>
-              </div>
-              <Button variant="outline" size="sm">
-                Act now
-              </Button>
-            </div>
-          ))}
+    <section className="space-y-8">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.4em] text-brand-gold/70">
+            Today
+          </p>
+          <h2 className="mt-3 text-3xl font-semibold text-brand-ivory">
+            Focus on the top priorities for a high-impact day.
+          </h2>
         </div>
+        <Button variant="outline" asChild>
+          <Link href="/search">
+            Run a Quick Search <ArrowUpRight size={16} />
+          </Link>
+        </Button>
       </div>
-    </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <InsightCard
+          title="Morning Brief"
+          description="Review your executive summary with overnight changes and key stakeholder updates."
+          icon={<Sun size={20} />}
+        />
+        <InsightCard
+          title="Momentum Queue"
+          description="Lock in next actions for pipeline deals, partnership follow-ups, and renewal touchpoints."
+          icon={<Clock size={20} />}
+        />
+        <InsightCard
+          title="Mission Completion"
+          description="Close loops on mission-critical deliverables and notify account leaders automatically."
+          icon={<CheckCircle2 size={20} />}
+        />
+      </div>
+    </section>
   );
 }
