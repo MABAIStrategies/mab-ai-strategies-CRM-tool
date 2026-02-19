@@ -295,21 +295,22 @@ model Template {
 }
 
 model MemoryItem {
-  id          String           @id @default(uuid()) @db.Uuid
-  companyId   String?          @db.Uuid
-  contactId   String?          @db.Uuid
-  dealId      String?          @db.Uuid
-  activityId  String?          @db.Uuid
-  taskId      String?          @db.Uuid
-  noteId      String?          @db.Uuid
-  templateId  String?          @db.Uuid
-  title       String?
-  content     String
-  sourceType  MemorySourceType @default(OTHER)
-  sourceId    String?
-  embedding   Unsupported("vector")?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id             String           @id @default(uuid())
+  sourceType     MemorySourceType
+  sourceId       String
+  companyId      String?
+  dealId         String?
+  contactId      String?
+  extractedFacts Json
+  embedding      Unsupported("vector")? @map("embedding")
+  searchText     String?
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+  createdAt      DateTime         @default(now())
+  company        Company?         @relation(fields: [companyId], references: [id])
+  deal           Deal?            @relation(fields: [dealId], references: [id])
+  contact        Contact?         @relation(fields: [contactId], references: [id])
 
   company     Company?         @relation(fields: [companyId], references: [id])
   contact     Contact?         @relation(fields: [contactId], references: [id])
