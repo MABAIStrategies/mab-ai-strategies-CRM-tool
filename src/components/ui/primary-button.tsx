@@ -8,6 +8,7 @@ import { useBrandingAssets } from "../use-branding-assets";
 export function PrimaryButton({
   label,
   variant = "solid",
+  size = "md",
   onClick,
   href,
   ariaLabel,
@@ -16,6 +17,7 @@ export function PrimaryButton({
 }: {
   label: string;
   variant?: "solid" | "outline";
+  size?: "sm" | "md";
   onClick?: () => void;
   href?: string;
   ariaLabel?: string;
@@ -24,7 +26,8 @@ export function PrimaryButton({
 }) {
   const { assets } = useBrandingAssets();
   const className = clsx(
-    "group relative inline-flex items-center justify-center overflow-hidden rounded-full px-5 py-2 text-sm font-medium transition",
+    "inline-flex items-center justify-center rounded-full font-medium transition",
+    size === "sm" ? "px-4 py-1.5 text-xs" : "px-5 py-2 text-sm",
     variant === "solid"
       ? "bg-mab-navy text-white shadow-glow hover:-translate-y-0.5"
       : "border border-mab-navy/30 text-mab-navy hover:bg-mab-navy hover:text-white",
