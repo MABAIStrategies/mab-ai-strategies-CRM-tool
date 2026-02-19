@@ -1,5 +1,18 @@
-<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="64" height="64" rx="16" fill="#0A1F44"/>
-  <path d="M18 42V22H24L32 34L40 22H46V42H40V30L32 40L24 30V42H18Z" fill="#D4AF37"/>
-  <circle cx="52" cy="18" r="4" fill="#F7F2E8"/>
+<svg width="260" height="64" viewBox="0 0 260 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#D4AF37" />
+      <stop offset="50%" stop-color="#F5D76E" />
+      <stop offset="100%" stop-color="#B6862B" />
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0B1D3A" />
+      <stop offset="100%" stop-color="#142B52" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="4" width="56" height="56" rx="16" fill="url(#blue)" />
+  <path d="M14 44V20H24L28 28L32 20H42V44H34V32L28 40L22 32V44H14Z" fill="url(#gold)" />
+  <path d="M64 23H92C97 23 101 27 101 32V32C101 37 97 41 92 41H64V23Z" fill="url(#gold)" />
+  <text x="112" y="26" fill="#F7F1E6" font-family="'Segoe UI', sans-serif" font-size="20" font-weight="700">MAB AI Strategies</text>
+  <text x="112" y="46" fill="#D8CBAF" font-family="'Segoe UI', sans-serif" font-size="12" font-weight="500">Local-First AI CRM</text>
 </svg>
