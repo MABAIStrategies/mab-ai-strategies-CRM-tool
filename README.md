@@ -43,7 +43,52 @@ docker run --rm -p 8080:8080 mab-crm:local
 
 > **Goal:** Deploy the Next.js app to Cloud Run with Cloud SQL Postgres and a GCS bucket for asset storage.
 
-### 1) Create Artifact Registry + build image
+---
+
+## AI Provider
+
+The AI provider is abstracted via `src/lib/ai-provider.ts`. Local mode uses a mock provider; swap in your production provider by wiring environment variables.
+
+---
+
+
+## MCP Integration: Google Workspace (Gmail + Calendar)
+
+This project now includes a Model Context Protocol-style integration pipeline that:
+
+- Authenticates with Google OAuth2
+- Syncs Gmail messages and Calendar events
+- Extracts contacts + meeting notes into CRM records
+- Creates `MemoryItem` rows for semantic retrieval
+- Schedules automated recurring sync via worker jobs
+
+### Setup
+
+Add the following environment variables:
+
+```bash
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_REDIRECT_URI=http://localhost:3000/integrations/google/callback
+```
+
+### API Endpoints
+
+- `POST /api/integrations/google/connect`
+  - Body: `{ "code": "oauth-auth-code", "redirectUri": "...optional..." }`
+  - Exchanges auth code, stores connection + tokens
+
+- `POST /api/integrations/google/sync`
+  - Body optional: `{ "connectionId": "..." }`
+  - Without `connectionId`, enqueues due scheduled sync jobs
+  - With `connectionId`, enqueues an immediate manual sync
+
+### Worker jobs
+
+- `MCP_SYNC_GOOGLE_WORKSPACE` — sync Gmail + Calendar into CRM
+- `MCP_SYNC_SCHEDULE` — recurring scheduler job for automatic sync
+
+## Tests
 
 ```bash
 gcloud artifacts repositories create mab-crm \\

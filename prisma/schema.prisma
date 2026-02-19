@@ -92,6 +92,16 @@ enum JobStatus {
   CANCELLED
 }
 
+enum IntegrationProvider {
+  GOOGLE_WORKSPACE
+}
+
+enum IntegrationStatus {
+  ACTIVE
+  REVOKED
+  ERROR
+}
+
 model Company {
   id           String       @id @default(uuid()) @db.Uuid
   name         String
@@ -340,4 +350,58 @@ model Job {
   @@index([status])
   @@index([type])
   @@index([runAt])
+}
+
+model IntegrationConnection {
+  id                  String              @id @default(uuid())
+  provider            IntegrationProvider
+  accountEmail        String?
+  accessToken         String
+  refreshToken        String?
+  tokenExpiresAt      DateTime?
+  scopes              String[]
+  status              IntegrationStatus   @default(ACTIVE)
+  syncIntervalMinutes Int                 @default(15)
+  lastSyncedAt        DateTime?
+  metadata            Json?
+  createdBy           String?
+  updatedBy           String?
+  deletedAt           DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  cursors             ExternalSyncCursor[]
+  entities            ExternalEntity[]
+
+  @@index([deletedAt])
+  @@index([provider, status])
+}
+
+model ExternalSyncCursor {
+  id           String                @id @default(uuid())
+  connectionId String
+  source       String
+  cursor       String?
+  lastRunAt    DateTime?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  connection   IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, source])
+}
+
+model ExternalEntity {
+  id           String                @id @default(uuid())
+  connectionId String
+  source       String
+  externalId   String
+  checksum     String?
+  contactId    String?
+  activityId   String?
+  noteId       String?
+  memoryItemId String?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  connection   IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, source, externalId])
 }
