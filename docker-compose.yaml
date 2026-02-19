@@ -1,22 +1,22 @@
 version: "3.9"
+
 services:
   db:
     image: pgvector/pgvector:pg16
-    env_file:
-      - .env.local
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-mab}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mab}
-      POSTGRES_DB: ${POSTGRES_DB:-mab_crm}
+    container_name: mabcrm-postgres
     ports:
       - "5432:5432"
+    environment:
+      POSTGRES_DB: mabcrm
+      POSTGRES_USER: mabcrm
+      POSTGRES_PASSWORD: mabcrm
     volumes:
-      - mab_pgdata:/var/lib/postgresql/data
+      - mabcrm_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mab} -d ${POSTGRES_DB:-mab_crm}"]
+      test: ["CMD-SHELL", "pg_isready -U mabcrm -d mabcrm"]
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 10s
+
 volumes:
-  mab_pgdata:
+  mabcrm_postgres_data:
