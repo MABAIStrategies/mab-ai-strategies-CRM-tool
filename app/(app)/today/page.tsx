@@ -6,29 +6,36 @@ import { getTodayDashboardData } from "../../../src/lib/dashboard-queries";
 
 export const revalidate = 60;
 
-const formatTime = (date: Date | string) => {
+const fallbackTime = "TBD";
+const fallbackStage = "Unassigned";
+
+const formatTime = (date: Date | string | null) => {
+  if (!date) {
+    return fallbackTime;
+  }
+
   const normalizedDate = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(normalizedDate.getTime())) {
+    return fallbackTime;
+  }
+
   return normalizedDate.toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit"
   });
 };
 
-const formatStage = (stage: string) =>
-  stage
+const formatStage = (stage: string | null) => {
+  if (!stage) {
+    return fallbackStage;
+  }
+
+  return stage
     .replace(/_/g, " ")
     .split(" ")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(" ");
-
-export default async function TodayPage() {
-  const { priorityTasks, upcomingActivities, topDeals } = await getTodayDashboardData();
-
-  const prioritySubtitle = `${priorityTasks.length} due · ${priorityTasks.filter((task) => task.status === "DOING").length} in motion`;
-  const callsSubtitle = upcomingActivities.length
-    ? "Auto-sorted by urgency"
-    : "No upcoming calls yet";
-  const dealsSubtitle = topDeals.length ? "AI-calculated engagement" : "Add deals to see momentum";
+};
 
 const engagementSignals = [
   {
@@ -46,7 +53,7 @@ const engagementSignals = [
     description: "Trigger any workflow with a single, intelligent search.",
     action: { label: "Launch palette", href: "/search" }
   }
-];
+] as const;
 
 const rapidMoves = [
   {
@@ -58,8 +65,8 @@ const rapidMoves = [
   {
     title: "Refine next steps",
     detail: "Surface follow-ups that keep deals accelerating today.",
-    href: "/assets",
-    label: "Open deal canvas"
+    href: "/tasks",
+    label: "Open tasks"
   },
   {
     title: "Ask the system",
@@ -67,9 +74,16 @@ const rapidMoves = [
     href: "/search",
     label: "Ask a question"
   }
-];
+] as const;
 
-export default function TodayPage() {
+export default async function TodayPage() {
+  const { priorityTasks, upcomingActivities, topDeals } = await getTodayDashboardData();
+
+  const activeTaskCount = priorityTasks.filter((task) => task.status === "DOING").length;
+  const prioritySubtitle = `${priorityTasks.length} due · ${activeTaskCount} in motion`;
+  const callsSubtitle = upcomingActivities.length ? "Auto-sorted by urgency" : "No upcoming calls yet";
+  const dealsSubtitle = topDeals.length ? "AI-calculated engagement" : "Add deals to see momentum";
+
   return (
     <div className="space-y-10">
       <header className="relative overflow-hidden rounded-3xl border border-mab-gold/30 bg-mab-ivory px-8 py-10 shadow-glow">
@@ -82,9 +96,7 @@ export default function TodayPage() {
               </div>
               <p className="text-sm uppercase tracking-[0.35em] text-mab-gold">Today</p>
             </div>
-            <h1 className="text-3xl font-semibold text-mab-navy sm:text-4xl">
-              Momentum Command Center
-            </h1>
+            <h1 className="text-3xl font-semibold text-mab-navy sm:text-4xl">Momentum Command Center</h1>
             <p className="text-sm text-mab-slate sm:text-base">
               Orchestrate every high-value moment with AI-native guidance, hyper-interactive workflows, and
               always-on next steps.
@@ -113,15 +125,16 @@ export default function TodayPage() {
             <div className="w-full rounded-xl border border-mab-gold/20 bg-mab-ivory/70 p-4">
               <p className="text-sm font-semibold text-mab-navy">Live Guidance</p>
               <p className="mt-2 text-xs text-mab-slate">
-                &ldquo;Your best next move is to confirm Brightline&rsquo;s implementation timeline and send the
-                stakeholder brief.&rdquo;
+                {priorityTasks.length
+                  ? `Focus first on ${priorityTasks[0].title.toLowerCase()} and close the loop with ${priorityTasks[0].companyName}.`
+                  : "Capture the first signal in Workspace, then let AI recommend next-best actions."}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <PrimaryButton label="Open brief" href="/assets" ariaLabel="Open stakeholder brief" size="sm" />
+                <PrimaryButton label="Open tasks" href="/tasks" ariaLabel="Open tasks" size="sm" />
                 <PrimaryButton
-                  label="Send summary"
-                  href="/workspace"
-                  ariaLabel="Send summary update"
+                  label="Review finish line"
+                  href="/finish-line"
+                  ariaLabel="Review finish line"
                   variant="outline"
                   size="sm"
                 />
@@ -154,11 +167,7 @@ export default function TodayPage() {
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-        <Card
-          title="Rapid Moves"
-          subtitle="Hyper-interactive action lane"
-          className="space-y-4 border-mab-gold/40 bg-white/80"
-        >
+        <Card title="Rapid Moves" subtitle="Hyper-interactive action lane" className="space-y-4 border-mab-gold/40 bg-white/80">
           {rapidMoves.map((move) => (
             <div
               key={move.title}
@@ -172,26 +181,47 @@ export default function TodayPage() {
             </div>
           ))}
         </Card>
+
         <div className="grid gap-6">
-          <Card title="Today’s Priority Tasks" subtitle="7 due, 3 critical" className="animate-pulse-glow">
+          <Card title="Today’s Priority Tasks" subtitle={prioritySubtitle} className="animate-pulse-glow">
             <ul className="space-y-3 text-sm text-mab-slate">
-              <li>Prepare follow-up for Brightline Logistics (Deal: Implementation)</li>
-              <li>Send proposal draft to HarborTech</li>
-              <li>Confirm discovery agenda with Westbridge Capital</li>
+              {priorityTasks.length ? (
+                priorityTasks.slice(0, 3).map((task) => (
+                  <li key={task.id}>
+                    {task.title} ({task.companyName}) · {formatStage(task.dealStage)}
+                  </li>
+                ))
+              ) : (
+                <li>No open tasks yet. Add one to activate this queue.</li>
+              )}
             </ul>
           </Card>
-          <Card title="Next Calls" subtitle="Auto-sorted by urgency">
+
+          <Card title="Next Calls" subtitle={callsSubtitle}>
             <ul className="space-y-3 text-sm text-mab-slate">
-              <li>11:00 AM – Margo Lee (Westbridge Capital)</li>
-              <li>2:30 PM – Liam Chen (Brightline Logistics)</li>
-              <li>4:15 PM – Pre-brief with internal team</li>
+              {upcomingActivities.length ? (
+                upcomingActivities.slice(0, 3).map((activity) => (
+                  <li key={activity.id}>
+                    {formatTime(activity.occurredAt)} — {activity.contactName ?? "Unassigned contact"} ({activity.companyName})
+                  </li>
+                ))
+              ) : (
+                <li>No calls or meetings scheduled yet.</li>
+              )}
             </ul>
           </Card>
-          <Card title="Top Deals by Momentum" subtitle="AI-calculated engagement">
+
+          <Card title="Top Deals by Momentum" subtitle={dealsSubtitle}>
             <ul className="space-y-3 text-sm text-mab-slate">
-              <li>Westbridge Capital — Momentum 92</li>
-              <li>Brightline Logistics — Momentum 81</li>
-              <li>HarborTech — Momentum 76</li>
+              {topDeals.length ? (
+                topDeals.slice(0, 3).map((deal) => (
+                  <li key={deal.id}>
+                    {deal.companyName} — Momentum {deal.momentumScore} · {formatStage(deal.stage)}
+                  </li>
+                ))
+              ) : (
+                <li>No deals available yet. Create one in the pipeline.</li>
+              )}
             </ul>
           </Card>
         </div>
