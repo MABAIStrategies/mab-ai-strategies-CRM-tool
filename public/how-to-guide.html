@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MAB AI Strategies CRM — How-to Guide</title>
+    <style>
+      :root {
+        --navy: #0f2747;
+        --gold: #d8b25f;
+        --ivory: #fbf8ef;
+        --slate: #4e6077;
+        --card: #ffffff;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: radial-gradient(circle at top right, #f5eac8, var(--ivory) 42%);
+        color: var(--navy);
+      }
+      .container { max-width: 1100px; margin: 0 auto; padding: 28px 18px 52px; }
+      .badge {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(216, 178, 95, 0.2);
+        color: var(--navy);
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+      h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); margin: 10px 0 8px; }
+      .lead { max-width: 760px; color: var(--slate); line-height: 1.6; }
+      .grid { display: grid; gap: 14px; margin-top: 18px; }
+      @media (min-width: 900px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+      .card {
+        background: var(--card);
+        border: 1px solid rgba(15, 39, 71, 0.08);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 12px 26px rgba(15, 39, 71, 0.08);
+      }
+      .card h3 { margin: 0 0 8px; font-size: 1rem; }
+      .card p { margin: 0; color: var(--slate); line-height: 1.55; }
+      .section { margin-top: 26px; }
+      ol { margin: 10px 0 0 20px; color: var(--slate); line-height: 1.6; }
+      .cta {
+        display: inline-block;
+        margin-top: 22px;
+        padding: 10px 16px;
+        border-radius: 999px;
+        text-decoration: none;
+        color: white;
+        background: var(--navy);
+        font-weight: 600;
+      }
+      footer { margin-top: 28px; font-size: 12px; color: var(--slate); }
+      code {
+        background: #eef2f7;
+        border-radius: 6px;
+        padding: 2px 6px;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <span class="badge">MAB AI Strategies</span>
+      <h1>CRM How-to Guide (Single Page)</h1>
+      <p class="lead">
+        This guide is your fast-start operating playbook for the MAB AI Strategies CRM. Use it to
+        capture opportunities, run strategy, and automate client momentum from one interface.
+      </p>
+
+      <section class="section">
+        <h2>1) Daily workflow</h2>
+        <div class="grid">
+          <article class="card">
+            <h3>Start in Today</h3>
+            <p>
+              Open <code>/today</code> first to review open tasks, overdue actions, and current deal momentum.
+              Clear urgent blockers before creating new work.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Capture in Workspace</h3>
+            <p>
+              Use <code>/workspace</code> for rapid notes, AI summaries, and action extraction. Attach outputs to
+              Companies, Contacts, and Deals in the same session.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Advance in Finish Line</h3>
+            <p>
+              Use <code>/finish-line</code> to align capture, memory, assets, and compliance actions into one
+              strategic progress view.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>2) Recommended setup sequence</h2>
+        <ol>
+          <li>Create and verify Companies and Contacts records.</li>
+          <li>Open Deals with clear next steps and ownership.</li>
+          <li>Set Tasks with deadlines for follow-up commitments.</li>
+          <li>Upload strategic sales assets in <code>/assets</code>.</li>
+          <li>Test semantic recall in <code>/search</code> to confirm memory quality.</li>
+          <li>Use <code>/brainstorming</code> and <code>/superpowers</code> to prioritize improvements.</li>
+        </ol>
+      </section>
+
+      <section class="section">
+        <h2>3) Automation best practices</h2>
+        <div class="grid">
+          <article class="card">
+            <h3>AI output discipline</h3>
+            <p>
+              Keep each note objective-focused: challenge, impact, decision, and next action. Better structure
+              yields better drafts, summaries, and reminders.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Compliance-first outreach</h3>
+            <p>
+              Require review checkpoints before outbound automation. Use the CRM compliance panels to prevent
+              accidental sends.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Pipeline hygiene</h3>
+            <p>
+              Never let a deal sit without a dated next step. Update stage, owner, and confidence notes after
+              every meaningful interaction.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <a class="cta" href="/finish-line">Return to Finish Line</a>
+      <footer>© MAB AI Strategies — Strategic CRM operations playbook.</footer>
+    </main>
+  </body>
+</html>

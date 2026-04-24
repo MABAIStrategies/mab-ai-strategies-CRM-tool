@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCommandPalette } from "./use-command-palette";
 import { useBrandingAssets } from "./use-branding-assets";
 
@@ -26,6 +27,12 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
         >
           ⌘K Command
         </button>
+        <Link
+          href="/finish-line"
+          className="hidden rounded-full border border-mab-navy/20 bg-mab-navy px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-glow md:inline-flex"
+        >
+          Finish Line
+        </Link>
       </div>
       <div className="flex items-center gap-3">
         <div className="text-right">
